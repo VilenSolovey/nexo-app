@@ -13,16 +13,25 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@nexo/*": ["src/*"]
-    }
+      "baseUrl": ".",
+      "paths": {
+        "@nexo/*": [
+            "src/*"
+          ],
+          "@/*": [
+            "src/*"
+          ]
+      }
   },
   "include": [
     "src/**/*",
     "app/**/*",
     "babel.config.js",
-    "metro.config.js"
-  ],
-  "exclude": ["node_modules"]
+    "metro.config.js",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+, "src"  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
