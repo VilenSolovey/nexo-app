@@ -1,0 +1,37 @@
+import React from "react"
+import { HomeTitle, Paragraph } from "@nexo/styles/home.styled"
+
+import { HeaderRow, UserLeft, NameWrap, CoinsWrap, CoinsLabel, CoinsPill, CoinsText, LevelPill, LevelText } from "@nexo/components/Home/UserHeader/UserHeader.styled"
+
+type Props = {
+  name?: string
+  coins?: number
+  level?: number
+}
+import { Avatar } from "@nexo/components/Home/Avatar"
+export const UserHeader: React.FC<Props> = ({ name = "Guest", coins = 0, level }) => {
+
+  return (
+    <HeaderRow>
+      <UserLeft>
+      <Avatar seed={name ?? "guest"} size={55} />
+        <NameWrap>
+          <HomeTitle>Привіт, {name}</HomeTitle>
+          <Paragraph>Готовий перемагати?</Paragraph>
+        </NameWrap>
+      </UserLeft>
+
+      <CoinsWrap>
+        <CoinsLabel>Nexons</CoinsLabel>
+        <CoinsPill>
+          <CoinsText>{coins}</CoinsText>
+        </CoinsPill>
+        {/* TODO: Implement level system */}
+          {/* <LevelPill>
+            <LevelText>Lv 5</LevelText>
+          </LevelPill> */}
+        
+      </CoinsWrap>
+    </HeaderRow>
+  )
+}
