@@ -2,7 +2,7 @@ import React from "react"
 import { Tabs } from "expo-router"
 import { useColorScheme } from "react-native"
 import { Colors } from "@nexo/constants/theme"
-import { AnimatedTabIcon } from "@nexo/TabBar/AnimatedTabIcon"
+import { AnimatedTabIcon } from "@nexo/components/TabBar/AnimatedTabIcon"
 
 export default function TabsLayout() {
   const colorScheme = useColorScheme() ?? "light"
@@ -42,6 +42,13 @@ export default function TabsLayout() {
           tabBarIcon: (props) => (
             <AnimatedTabIcon {...props} name="home-outline" />
           ),
+        }}
+      />
+     
+      <Tabs.Screen
+        name="shop"
+        options={{
+          href: null,
         }}
       />
     <Tabs.Screen
