@@ -1,16 +1,14 @@
 import { Appearance } from "react-native"
 import styled from "styled-components/native"
-import { Colors } from "@nexo/constants/theme"
+import { Theme } from "@nexo/constants/theme"
 
-const colorScheme = Appearance.getColorScheme()
-const theme = Colors[colorScheme ?? "light"]
 
 export const Container = styled.View`
 	width: 95%;
 	flex-direction: row;
 	justify-content: space-between;
 	align-items: center;
-	background-color: ${theme.shopCard};
+	background-color: ${Theme.shopCard};
 	padding: 22px;
 	border-radius: 16px;
  	border-width: 1px;
@@ -25,13 +23,13 @@ export const Left = styled.View`
 export const Title = styled.Text`
 	font-size: 18px;
 	font-weight: 700;
-	color: ${theme.text};
+	color: ${Theme.text};
 `;
 
 export const Subtitle = styled.Text`
 	font-size: 14px;
 	margin-top: 6px;
-	color: ${theme.textSecondary};
+	color: ${Theme.textSecondary};
 `;
 
 export const Cta = styled.View`
@@ -39,12 +37,12 @@ export const Cta = styled.View`
 	border-radius: 10px;
 	align-items: center;
 	border-width: 1px;
-	border-color: ${theme.primary};
+	border-color: ${Theme.primary};
 	background-color: transparent;
 `;
 
 export const CtaText = styled.Text`
-  color: ${theme.primary};
+  color: ${Theme.primary};
   font-weight: 800;
 `;
 

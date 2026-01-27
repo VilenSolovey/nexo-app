@@ -1,5 +1,5 @@
 import React from "react"
-import { HomeTitle, Paragraph } from "@nexo/styles/home.styled"
+import { HomeTitle, Paragraph } from "@nexo/components/Home/HomeLayout"
 
 import { HeaderRow, UserLeft, NameWrap, CoinsWrap, CoinsLabel, CoinsPill, CoinsText, LevelPill, LevelText } from "@nexo/components/Home/UserHeader/UserHeader.styled"
 

@@ -1,15 +1,9 @@
-export type CompletedQuiz = {
-  quizId: string
-  completedAt: number
-  score?: number
-  rewardEarned?: number
-}
-
-export type User = {
+export interface UserProfile {
   id: string
-  name: string
+  email: string
+  displayName: string
   coins: number
-  streakDays: number
+  exp: number
   level: number
-  completedQuizzes: CompletedQuiz[]
+  streak: number
 }

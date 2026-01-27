@@ -1,13 +1,11 @@
 import { Text, View, StyleSheet, useColorScheme } from "react-native"
-import { Colors } from "@nexo/constants/theme"
+import { Theme } from "@nexo/constants/theme"
 
 export default function Quiz() {
-  const colorScheme = useColorScheme() 
-  const theme = Colors[colorScheme ?? "light"]
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.text, { color: theme.text }]}>Quizzes</Text>
+    <View style={[styles.container, { backgroundColor: Theme.background }]}>
+      <Text style={[styles.text, { color: Theme.text }]}>Quizzes</Text>
     </View>
   )
 }

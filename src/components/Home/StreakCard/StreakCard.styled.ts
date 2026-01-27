@@ -1,9 +1,7 @@
 import { Appearance } from "react-native"
 import styled from "styled-components/native"
-import { Colors } from "@nexo/constants/theme"
+import { Theme } from "@nexo/constants/theme"
 
-const colorScheme = Appearance.getColorScheme()
-const theme = Colors[colorScheme ?? "light"]
 
 export const StreakBanner = styled.View`
   width: 90%;
@@ -46,19 +44,19 @@ export const StreakEmoji = styled.Text`
 export const StreakText = styled.Text`
   margin-left: 10px;
   font-weight: 800;
-  color: ${theme.text};
+  color: ${Theme.text};
 `;
 
 export const StreakSubText = styled.Text`
   margin-left: 10px;
-  color: ${theme.textSecondary};
+  color: ${Theme.textSecondary};
   font-size: 12px;
 `;
 
 export const StreakProgress = styled.View`
   height: 6px;
   border-radius: 999px;
-  background-color: ${theme.card};
+  background-color: ${Theme.card};
   margin-top: 8px;
   overflow: hidden;
 `;
@@ -66,20 +64,20 @@ export const StreakProgress = styled.View`
 export const StreakProgressFill = styled.View<{ $variant?: 'neutral' | 'warm' | 'celebrate' }>`
   height: 100%;
   background-color: ${({ $variant }) =>
-    $variant === 'celebrate' ? theme.primary : $variant === 'warm' ? theme.warning : theme.textSecondary};
+    $variant === 'celebrate' ? Theme.primary : $variant === 'warm' ? Theme.warning : Theme.textSecondary};
 `;
 
 export const StreakHintPill = styled.View`
   padding: 6px 10px;
   border-radius: 999px;
-  background-color: ${theme.card};
+  background-color: ${Theme.card};
   border-width: 1px;
   border-color: rgba(235, 167, 110, 0.35);
 `;
 
 export const StreakHintText = styled.Text`
   font-weight: 700;
-  color: ${theme.text};
+  color: ${Theme.text};
   font-size: 12px;
 `;
 

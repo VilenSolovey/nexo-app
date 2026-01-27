@@ -14,7 +14,7 @@ import {
   StatusText,
 } from "@nexo/components/Home/RecentSection/RecentSection.styled"
 
-import { Paragraph } from "@nexo/styles/home.styled"
+import { Paragraph } from "@nexo/components/Home/HomeLayout"
 import type { RecentItem } from "@nexo/types/quiz.types"
 
 type Props = {
