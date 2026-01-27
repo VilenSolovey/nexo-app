@@ -1,48 +1,17 @@
-export const Palette = {
-  // Base surfaces
-  background: '#1E2B25', 
-  card: '#24372E', 
+export const Theme = {
+  background: '#1E2B25',
+  card: '#24372E',
+  cardBorder: '#2F4B3F',
 
-  // Typography
-  textPrimary: '#E8F5E9', 
-  textSecondary: '#A3B4AA', 
+  text: '#E8F5E9',
+  textSecondary: '#A3B4AA',
 
-  // Accents
-  accent: '#5EEAD4', 
-  accentAlt: '#A5F3FC', 
+  primary: '#5EEAD4',
+  accentAlt: '#A5F3FC',
 
-  // Semantic
-  warning: '#EBA76E', 
+  icon: '#A3B4AA',        
+  iconActive: '#5EEAD4',
 
-  // Special surfaces
+  warning: '#EBA76E',
   shopCard: '#2F4B3F',
 }
-
-export const Colors = {
-  light: {
-    background: Palette.background,
-    card: Palette.card,
-    text: Palette.textPrimary,
-    textSecondary: Palette.textSecondary,
-    primary: Palette.accent, 
-    accentAlt: Palette.accentAlt,
-    warning: Palette.warning,
-    shopCard: Palette.shopCard,
-    tint: Palette.accent,
-  },
-  dark: {
-    // For now, align dark with the same palette for consistency
-    // TODO: Adjust colors for better dark mode experience
-    background: Palette.background,
-    card: Palette.card,
-    text: Palette.textPrimary,
-    textSecondary: Palette.textSecondary,
-    primary: Palette.accent,
-    accentAlt: Palette.accentAlt,
-    warning: Palette.warning,
-    shopCard: Palette.shopCard,
-    tint: Palette.accent,
-  },
-}
-
-export type ThemeName = 'light' | 'dark'

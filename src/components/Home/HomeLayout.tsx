@@ -1,16 +1,14 @@
 import { Appearance } from "react-native"
 import { SafeAreaView as SafeArea } from "react-native-safe-area-context"
-import { Colors } from "@nexo/constants/theme"
+import { Theme } from "@nexo/constants/theme"
 import styled from "styled-components/native"
 
-const colorScheme = Appearance.getColorScheme()
-const theme = Colors[colorScheme ?? "light"]
 
 export const HomeContainer = styled(SafeArea).attrs({
   edges: ["top", "right", "left", "bottom"],
 })`
   flex: 1;
-  background-color: ${theme.background};
+  background-color: ${Theme.background};
   align-items: center;
   padding: 16px;
 `
@@ -31,13 +29,13 @@ export const HeaderRow = styled.View`
 
 export const HomeTitle = styled.Text`
   font-size: 18px;
-  color: ${theme.text};
+  color: ${Theme.text};
   font-weight: 600;
 
 `
 
 export const QuizCard = styled.View`
-  background-color: ${theme.card};
+  background-color: ${Theme.card};
   padding: 16px;
   border-radius: 12px;
   margin-bottom: 10px;
@@ -47,7 +45,7 @@ export const Banner = styled.View`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  background-color: ${theme.primary};
+  background-color: ${Theme.primary};
   padding: 16px;
   border-radius: 16px;
 `;
@@ -71,5 +69,5 @@ export const StatusPill = styled.View`
 
 export const Paragraph = styled.Text`
   font-size: 13px;
-  color: ${theme.textSecondary};
+  color: ${Theme.textSecondary};
 `

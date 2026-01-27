@@ -5,7 +5,7 @@ import {
   HomeTitle,
   Paragraph,
   QuizCard,
-} from "@nexo/styles/home.styled"
+} from "@nexo/components/Home/HomeLayout"
 
 export default function ShopScreen() {
   return (

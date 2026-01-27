@@ -1,9 +1,7 @@
 import { Appearance } from "react-native"
 import styled from "styled-components/native"
-import { Colors } from "@nexo/constants/theme"
+import { Theme } from "@nexo/constants/theme"
 
-const colorScheme = Appearance.getColorScheme()
-const theme = Colors[colorScheme ?? "light"]
 
 export const NewsWrap = styled.View`
   width: 100%;
@@ -29,7 +27,7 @@ export const NewsCard = styled.View<{ $type?: string }>`
       ? 'rgba(104, 186, 127, 0.20)'
       : $type === 'trial'
       ? 'rgba(165, 243, 252, 0.16)'
-      : theme.card};
+      : Theme.card};
   border-width: 1px;
   border-color: ${({ $type }) =>
     $type === 'spark'
@@ -63,7 +61,7 @@ export const NewsCardCornerText = styled.Text<{ $type?: string }>`
   font-size: 12px;
   font-weight: 700;
   color: ${({ $type }) =>
-    $type === 'spark' || $type === 'trial' ? '#1b1b1b' : theme.text};
+    $type === 'spark' || $type === 'trial' ? '#1b1b1b' : Theme.text};
 `;
 
 export const NewsCardTitle = styled.Text`
@@ -71,7 +69,7 @@ export const NewsCardTitle = styled.Text`
   line-height: 26px;
   font-weight: 800;
   text-align: center;
-  color: ${theme.text};
+  color: ${Theme.text};
   padding: 0 6px;
 `;
 
@@ -93,7 +91,7 @@ export const NewsBadge = styled.View<{ $type?: string }>`
       ? 'rgba(104, 186, 127, 0.20)'
       : $type === 'trial'
       ? 'rgba(165, 243, 252, 0.20)'
-      : theme.background};
+      : Theme.background};
 `;
 
 export const NewsBadgeText = styled.Text<{ $type?: string }>`
@@ -104,17 +102,17 @@ export const NewsBadgeText = styled.Text<{ $type?: string }>`
       ? '#abccb6ff'
       : $type === 'trial'
       ? '#b9eff7ff'
-      : theme.text};
+      : Theme.text};
 `;
 
 export const SectionTitle = styled.Text`
   font-size: 16px;
   font-weight: 700;
-  color: ${theme.text};
+  color: ${Theme.text};
 `;
 
 export const SeeAll = styled.Text`
-  color: ${theme.primary};
+  color: ${Theme.primary};
   font-weight: 600;
 `;
 
