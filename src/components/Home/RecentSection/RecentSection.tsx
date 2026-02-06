@@ -55,7 +55,7 @@ export const RecentSection: React.FC<Props> = ({ items, onSeeAll, onPressItem })
           >
             <RecentCard>
               <QuizLeft>
-                <QuizIcon />
+                <QuizIcon type={item.type} />
                 <NameWrap>
                   <QuizTitle>{item.title}</QuizTitle>
                   <Paragraph>

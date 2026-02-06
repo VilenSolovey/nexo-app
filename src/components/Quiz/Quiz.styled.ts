@@ -36,7 +36,6 @@ export const SearchIcon = styled(Ionicons).attrs({
 export const SearchInput = styled.TextInput.attrs({
   placeholderTextColor: Theme.text,
 })`
-  flex: 1;
   height: 48px;
   color: ${Theme.text};
   font-size: 16px;
@@ -45,14 +44,16 @@ export const SearchInput = styled.TextInput.attrs({
 export const FilterContainer = styled.ScrollView.attrs({
   horizontal: true,
   showsHorizontalScrollIndicator: false,
+  contentContainerStyle: {
+    paddingHorizontal: 20,
+  },
 })`
-  padding-horizontal: 20px;
-  margin-bottom: 16px;
+
 `
 
 export const FilterTab = styled.TouchableOpacity<{ active?: boolean }>`
   padding-horizontal: 20px;
-  padding-vertical: 10px;
+  padding-vertical: 8px;
   border-radius: 20px;
   background-color: ${({ active }) => (active ? Theme.icon : Theme.background)};
   margin-right: 12px;
@@ -66,14 +67,14 @@ export const FilterText = styled.Text<{ active?: boolean }>`
   color: ${({ active }) => (active ? Theme.primary : Theme.textSecondary)};
 `
 
-export const ScrollContent = styled.ScrollView.attrs({
+export const ScrollContent = styled.ScrollView.attrs(() => ({
   contentContainerStyle: {
     padding: 20,
-    paddingTop: 0,
-    paddingBottom: 100,
+    paddingVertical: 20,
   },
   showsVerticalScrollIndicator: false,
-})``
+}))`
+`
 
 export const LoadingText = styled.Text`
   color: ${Theme.textSecondary};

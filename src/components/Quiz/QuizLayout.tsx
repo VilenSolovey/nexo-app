@@ -16,8 +16,6 @@ const Gradient = styled(LinearGradient)<LinearGradientProps>`
 const Safe = styled(SafeAreaView)`
   flex: 1;
 `
-
-
 const Content = styled.View`
   width: 100%;
 `

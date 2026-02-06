@@ -37,11 +37,12 @@ export const QuizLeft = styled.View`
   align-items: center;
 `;
 
-export const QuizIcon = styled.View`
+export const QuizIcon = styled.View<{ type?: 'trial' | 'spark' }>`
   width: 44px;
   height: 44px;
   border-radius: 10px;
-  background-color: ${Theme.background};
+  background-color: ${({ type }) =>
+    type === 'trial' ? 'rgba(111, 219, 202, 0.2)' : 'rgba(255, 107, 53, 0.2)'};
 `;
 
 export const StatusDone = styled(StatusPill)`
