@@ -40,8 +40,8 @@ export const NewsSection: React.FC<Props> = ({ items, onSeeAll, onPressItem }) =
       </SectionHeader>
       <NewsScroll horizontal showsHorizontalScrollIndicator={false}>
         {items.map((n) => {
-          const type = n.category?.toLowerCase()
-          const variant = type === "spark" ? "spark" : type === "trial" ? "trial" : undefined
+          const variant = n.type || 'trial'
+          
           return (
             <Pressable
               key={n.id}
@@ -52,15 +52,14 @@ export const NewsSection: React.FC<Props> = ({ items, onSeeAll, onPressItem }) =
               style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }] })}
             >
               <NewsCard $type={variant}>
-                {variant ? (
-                  <NewsCardCorner $type={variant}>
-                    <NewsCardCornerText $type={variant}>{variant.toUpperCase()}</NewsCardCornerText>
-                  </NewsCardCorner>
-                ) : null}
+                <NewsCardCorner $type={variant}>
+                  <NewsCardCornerText $type={variant}>{variant.toUpperCase()}</NewsCardCornerText>
+                </NewsCardCorner>
+                
                 <NewsCardTitle numberOfLines={2}>{n.title}</NewsCardTitle>
                 <NewsBadgesRow>
                   <NewsBadge $type={variant}>
-                    <NewsBadgeText $type={variant}>{n.questions} Пт</NewsBadgeText>
+                    <NewsBadgeText $type={variant}>{n.questionsCount} Пт</NewsBadgeText>
                   </NewsBadge>
                   <NewsBadge $type={variant}>
                     <NewsBadgeText $type={variant}>{n.category}</NewsBadgeText>

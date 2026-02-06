@@ -55,27 +55,16 @@ export const RecentSection: React.FC<Props> = ({ items, onSeeAll, onPressItem })
           >
             <RecentCard>
               <QuizLeft>
-                <QuizIcon />
+                <QuizIcon type={item.type} />
                 <NameWrap>
                   <QuizTitle>{item.title}</QuizTitle>
                   <Paragraph>
-                    {item.questions} questions · {item.category}
+                    {item.questionsCount} questions · {item.category}
                     {typeof item.reward === "number" ? ` · +${item.reward}` : ""}
                   </Paragraph>
                   
                 </NameWrap>
               </QuizLeft>
-              {item.status ? (
-                item.status === "Completed" ? (
-                  <StatusDone>
-                    <StatusText>{item.status}</StatusText>
-                  </StatusDone>
-                ) : (
-                  <StatusIncomplete>
-                    <StatusText>{item.status}</StatusText>
-                  </StatusIncomplete>
-                )
-              ) : null}
             </RecentCard>
             
           </Pressable>
