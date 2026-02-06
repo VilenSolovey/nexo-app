@@ -33,7 +33,7 @@ export default function LoginScreen() {
     setLoading(true)
     try {
       await signInEmail(email, password)
-      router.push('/(tabs)')
+      router.replace('/(tabs)')
     } catch (error: any) {
       Alert.alert('Помилка', error.message || 'Не вдалося увійти')
     } finally {
