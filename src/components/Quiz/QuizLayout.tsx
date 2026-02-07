@@ -1,5 +1,5 @@
 import React from 'react'
-import { Platform, KeyboardAvoidingView, ScrollView } from 'react-native'
+import { Platform, KeyboardAvoidingView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient, LinearGradientProps } from 'expo-linear-gradient'
 import styled from 'styled-components/native'

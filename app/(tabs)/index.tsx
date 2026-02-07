@@ -1,22 +1,18 @@
-import React, { useMemo } from "react"
+import React, { useMemo, useState } from "react"
 import * as Haptics from "expo-haptics"
 import { useRouter } from "expo-router"
-import {
-  HomeContainer,
-  UserContainer,
-  Paragraph,
-} from "@nexo/components/Home/HomeLayout"
+import { UserContainer, Paragraph } from "@nexo/components/Home/HomeLayout"
 import { Banner } from "@nexo/components/Home/Banner/Banner"
 import { UserHeader } from "@nexo/components/Home/UserHeader/UserHeader"
 import { StreakCard } from "@nexo/components/Home/StreakCard/StreakCard"
 import { NewsSection } from "@nexo/components/Home/NewSection/NewsSection"
 import { RecentSection } from "@nexo/components/Home/RecentSection/RecentSection"
+import { RefreshableScreen } from "@nexo/components/RefreshableScreen"
 import { useAuth } from "@nexo/contexts/AuthProvider"
 import { useAllQuizzes } from "@nexo/hooks/useAllQuizzes"
 import { useRecentResults } from "@nexo/hooks/useRecentResults"
 import type { NewsItem, RecentItem } from "@nexo/types/quiz.types"
 import type { QuizResult } from "@nexo/types/result.types"
-
 
 function joinRecentQuizzes(
   quizzes: NewsItem[],
@@ -51,25 +47,47 @@ function joinRecentQuizzes(
 export default function HomeScreen() {
   const router = useRouter()
   const { userProfile, loading: authLoading } = useAuth()
-  const { quizzes, loading: quizzesLoading, error } = useAllQuizzes()
-  const { results, loading: resultsLoading } = useRecentResults(userProfile?.id)
+  const { quizzes, loading: quizzesLoading, error, refetch: refetchQuizzes } = useAllQuizzes()
+  const { results, loading: resultsLoading, refetch: refetchResults } = useRecentResults(userProfile?.id)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   
-  const news = useMemo(
-    () => quizzes.slice(0, 5),
-    [quizzes]
+  const pullToRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        refetchQuizzes?.(),
+        refetchResults?.(),
+      ])
+    } finally {
+      setIsRefreshing(false)
+    }
+  } 
+  
+  const completedQuizIds = useMemo(
+  () => new Set(results.map(r => r.quizId)),
+  [results]
   )
+
+  const availableQuizzes = useMemo(
+  () => quizzes.filter(q => !completedQuizIds.has(q.id)),
+  [quizzes, completedQuizIds]
+  )
+
+  const news = useMemo(
+  () => availableQuizzes.slice(0, 5),
+  [availableQuizzes]
+)
 
   const recent = useMemo(
     () => joinRecentQuizzes(quizzes, results),
     [quizzes, results]
-  )
+  ) 
 
   const loading = authLoading || quizzesLoading || resultsLoading
   const streakDays = userProfile?.streakDays ?? userProfile?.streak ?? 0
 
   return (
-    <HomeContainer>
-
+    <RefreshableScreen onRefresh={pullToRefresh} refreshing={isRefreshing}>
       <UserContainer>
         <UserHeader
           name={userProfile?.displayName ?? "Guest"}
@@ -109,7 +127,6 @@ export default function HomeScreen() {
           }}
         />
       )}
-
-    </HomeContainer>
+    </RefreshableScreen>
   )
 }

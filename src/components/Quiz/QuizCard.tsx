@@ -39,7 +39,7 @@ export function QuizCard({ quiz, onPress }: Props) {
       </QuizHeader>
 
       <QuizTitle>{quiz.title}</QuizTitle>
-      <QuizCategory>{quiz.category}</QuizCategory>
+      <QuizCategory>{quiz.description}</QuizCategory>
 
       <QuizStats>
         <StatItem>
@@ -60,7 +60,7 @@ export function QuizCard({ quiz, onPress }: Props) {
           </RewardItem>
           <RewardItem>
             <Ionicons name="star-outline" size={16} color={Theme.warning} />
-            <RewardText>+0</RewardText>
+            <RewardText>+{quiz.exp}</RewardText>
           </RewardItem>
         </Rewards>
         <PlayButton>

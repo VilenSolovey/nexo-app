@@ -7,6 +7,15 @@ export function useAllQuizzes() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const refetch = () => {
+    setLoading(true)
+    setError(null)
+
+    getAllQuizzes()
+      .then(rows => setQuizzes(normalizeQuizzes(rows)))
+      .catch(e => setError(e?.message ?? "Failed to load quizzes"))
+      .finally(() => setLoading(false))
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -30,5 +39,5 @@ export function useAllQuizzes() {
     }
   }, [])
 
-  return { quizzes, loading, error }
+  return { quizzes, loading, error, refetch }
 }

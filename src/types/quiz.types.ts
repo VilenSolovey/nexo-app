@@ -9,6 +9,7 @@ export type Quiz = {
   questionsCount: number
   reward: number
   description?: string
+  exp?: number
 }
 
 export type QuizQuestion = {

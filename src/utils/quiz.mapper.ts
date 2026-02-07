@@ -13,6 +13,7 @@ export function normalizeQuizzes(rows: any[]): Quiz[] {
         ? r.questions.length
         : Number(r.questions ?? 0),
       reward: Number(r.reward ?? 0),
+      exp: Number(r.exp ?? 0),
       description:
         typeof r.description === 'string' ? r.description : undefined,
     }
