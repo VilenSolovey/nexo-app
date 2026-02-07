@@ -46,9 +46,11 @@ export const FilterContainer = styled.ScrollView.attrs({
   showsHorizontalScrollIndicator: false,
   contentContainerStyle: {
     paddingHorizontal: 20,
+    alignItems: 'flex-start',
   },
 })`
 
+  height: 44px;
 `
 
 export const FilterTab = styled.TouchableOpacity<{ active?: boolean }>`
@@ -70,7 +72,8 @@ export const FilterText = styled.Text<{ active?: boolean }>`
 export const ScrollContent = styled.ScrollView.attrs(() => ({
   contentContainerStyle: {
     padding: 20,
-    paddingVertical: 20,
+    paddingBottom: 50,
+    flexGrow: 1,
   },
   showsVerticalScrollIndicator: false,
 }))`

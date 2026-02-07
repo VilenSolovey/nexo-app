@@ -18,6 +18,7 @@ const Safe = styled(SafeAreaView)`
 `
 const Content = styled.View`
   width: 100%;
+  flex: 1;
 `
 
 export function QuizLayout({ children }: Props) {
@@ -25,9 +26,9 @@ export function QuizLayout({ children }: Props) {
     <Gradient colors={[Theme.background, Theme.card]}>
       <Safe>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-        >
+  behavior={Platform.OS === 'ios' ? 'height' : undefined}
+  style={{ flex: 1 }}
+>
           
             <Content>
               {children}
