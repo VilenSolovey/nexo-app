@@ -1,6 +1,6 @@
 import React from 'react'
 import { QuizType } from '@nexo/types/quiz.types'
-import { FilterContainer, FilterTab, FilterText } from './Quiz.styled'
+import { FilterContainer, FilterTab, FilterText } from '@nexo/components/Quiz/Quiz.styled'
 
 type Props = {
   selectedType: QuizType | 'all'

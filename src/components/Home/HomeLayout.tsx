@@ -4,13 +4,22 @@ import { Theme } from "@nexo/constants/theme"
 import styled from "styled-components/native"
 
 
-export const HomeContainer = styled(SafeArea).attrs({
+export const HomeSafeArea = styled(SafeArea).attrs({
   edges: ["top", "right", "left", "bottom"],
 })`
   flex: 1;
   background-color: ${Theme.background};
-  align-items: center;
-  padding: 16px;
+`
+
+export const HomeScroll = styled.ScrollView.attrs({
+  contentContainerStyle: {
+    padding: 16,
+    alignItems: "center",
+    flexGrow: 1,
+  },
+  showsVerticalScrollIndicator: false,
+})`
+  flex: 1;
 `
 
 export const UserContainer = styled.View`

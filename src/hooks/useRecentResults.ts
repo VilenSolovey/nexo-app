@@ -14,8 +14,7 @@ import type { QuizResult } from "@nexo/types/result.types"
 export function useRecentResults(userId?: string) {
   const [results, setResults] = useState<QuizResult[]>([])
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
+  const refetch = async () => {
     if (!userId) {
       setResults([])
       setLoading(false)
@@ -23,30 +22,34 @@ export function useRecentResults(userId?: string) {
     }
 
     setLoading(true)
-    const q = query(
-      collection(db, "results"),
-      where("userId", "==", userId),
-      orderBy("completedAt", "desc"),
-      limit(3)
-    )
+    try {
+      const q = query(
+        collection(db, "results"),
+        where("userId", "==", userId),
+        orderBy("completedAt", "desc"),
+        limit(3)
+      )
 
-    getDocs(q)
-      .then((snap) => {
-        const rows = snap.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as Omit<QuizResult, "id">),
-        }))
+      const snap = await getDocs(q)
+      const rows = snap.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<QuizResult, "id">),
+      }))
 
-        setResults(rows)
-      })
-      .catch((err) => {
-        console.error("Failed to fetch recent results:", err)
-        setResults([])
-      })
-      .finally(() => {
-        setLoading(false)
-      })
+      setResults(rows)
+    } catch (err) {
+      console.error("Failed to fetch recent results:", err)
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    // initial load
+    refetch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
-  return { results, loading }
-} 
+  return { results, loading, refetch }
+}
