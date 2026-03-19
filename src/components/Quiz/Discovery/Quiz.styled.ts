@@ -50,7 +50,6 @@ export const FilterContainer = styled.ScrollView.attrs({
   },
 })`
 
-  height: 44px;
 `
 
 export const FilterTab = styled.TouchableOpacity<{ active?: boolean }>`
@@ -72,11 +71,10 @@ export const FilterText = styled.Text<{ active?: boolean }>`
 export const ScrollContent = styled.ScrollView.attrs(() => ({
   contentContainerStyle: {
     padding: 20,
-    paddingBottom: 50,
-    flexGrow: 1,
   },
   showsVerticalScrollIndicator: false,
 }))`
+  height: 80%;
 `
 
 export const LoadingText = styled.Text`
@@ -85,6 +83,8 @@ export const LoadingText = styled.Text`
 `
 
 export const QuizCard = styled.TouchableOpacity`
+  width: 100%;
+  align-self: stretch;
   background-color: ${Theme.background};
   border-radius: 16px;
   padding: 20px;

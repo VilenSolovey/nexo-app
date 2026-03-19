@@ -1,5 +1,5 @@
 import React from 'react'
-import { SearchContainer, SearchIcon, SearchInput } from '@nexo/components/Quiz/Quiz.styled'
+import { SearchContainer, SearchIcon, SearchInput } from '@nexo/components/Quiz/Discovery/Quiz.styled'
 
 type Props = {
   value: string

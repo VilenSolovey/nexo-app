@@ -46,7 +46,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      return docSnap.data() as UserProfile;
+      return {
+        ...(docSnap.data() as UserProfile),
+        id: uid,
+        uid,
+      };
     }
     return null;
   };

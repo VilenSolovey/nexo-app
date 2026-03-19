@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react"
 import * as Haptics from "expo-haptics"
 import { useRouter } from "expo-router"
+import { useFocusEffect } from "@react-navigation/native"
 import { UserContainer, Paragraph } from "@nexo/components/Home/HomeLayout"
 import { Banner } from "@nexo/components/Home/Banner/Banner"
 import { UserHeader } from "@nexo/components/Home/UserHeader/UserHeader"
@@ -10,34 +11,39 @@ import { RecentSection } from "@nexo/components/Home/RecentSection/RecentSection
 import { RefreshableScreen } from "@nexo/components/RefreshableScreen"
 import { useAuth } from "@nexo/contexts/AuthProvider"
 import { useAllQuizzes } from "@nexo/hooks/useAllQuizzes"
-import { useRecentResults } from "@nexo/hooks/useRecentResults"
+import { useUserQuizProgress } from "@nexo/hooks/useUserQuizProgress"
 import type { NewsItem, RecentItem } from "@nexo/types/quiz.types"
-import type { QuizResult } from "@nexo/types/result.types"
+import type { UserQuizProgress } from "@nexo/types/result.types"
+import { isQuizRecent, toMillis } from "@nexo/utils/quiz-progress"
 
 function joinRecentQuizzes(
   quizzes: NewsItem[],
-  results: QuizResult[]
+  progressList: UserQuizProgress[]
 ): RecentItem[] {
-  const quizIndex = new Map(quizzes.map(q => [q.id, q]))
+  const progressIndex = new Map(progressList.map(progress => [progress.quizId, progress]))
 
-  return results
-    .map(r => {
-      const quiz = quizIndex.get(r.quizId)
-      if (!quiz) {
-        return null
-      }
-
-      const completedAt = typeof r.completedAt === 'object' && 'seconds' in r.completedAt
-        ? r.completedAt.seconds
-        : typeof r.completedAt === 'number'
-        ? r.completedAt
-        : Date.now() / 1000
+  return quizzes
+    .filter((quiz) => isQuizRecent({
+      progress: progressIndex.get(quiz.id),
+      createdAt: quiz.createdAt,
+    }))
+    .sort((a, b) => {
+      const aProgress = progressIndex.get(a.id)
+      const bProgress = progressIndex.get(b.id)
+      const aTime = toMillis(aProgress?.lastPlayedAt) ?? toMillis(a.createdAt) ?? 0
+      const bTime = toMillis(bProgress?.lastPlayedAt) ?? toMillis(b.createdAt) ?? 0
+      return bTime - aTime
+    })
+    .slice(0, 3)
+    .map((quiz) => {
+      const progress = progressIndex.get(quiz.id)
+      const completedAtMs = toMillis(progress?.lastPlayedAt) ?? toMillis(quiz.createdAt) ?? Date.now()
 
       return {
         ...quiz,
-        completedAt,
-        score: r.score,
-        total: r.total,
+        completedAt: Math.floor(completedAtMs / 1000),
+        score: progress?.officialScore ?? progress?.bestScore ?? 0,
+        total: quiz.questionsCount,
       }
     })
     .filter((item): item is RecentItem => item !== null)
@@ -47,8 +53,9 @@ function joinRecentQuizzes(
 export default function HomeScreen() {
   const router = useRouter()
   const { userProfile, loading: authLoading } = useAuth()
+  const userId = userProfile?.uid ?? userProfile?.id
   const { quizzes, loading: quizzesLoading, error, refetch: refetchQuizzes } = useAllQuizzes()
-  const { results, loading: resultsLoading, refetch: refetchResults } = useRecentResults(userProfile?.id)
+  const { progressList, progressMap, loading: progressLoading, refetch: refetchProgress } = useUserQuizProgress(userId)
   const [isRefreshing, setIsRefreshing] = useState(false)
   
   const pullToRefresh = async () => {
@@ -56,35 +63,37 @@ export default function HomeScreen() {
     try {
       await Promise.all([
         refetchQuizzes?.(),
-        refetchResults?.(),
+        refetchProgress?.(),
       ])
     } finally {
       setIsRefreshing(false)
     }
   } 
   
-  const completedQuizIds = useMemo(
-  () => new Set(results.map(r => r.quizId)),
-  [results]
-  )
-
-  const availableQuizzes = useMemo(
-  () => quizzes.filter(q => !completedQuizIds.has(q.id)),
-  [quizzes, completedQuizIds]
-  )
-
   const news = useMemo(
-  () => availableQuizzes.slice(0, 5),
-  [availableQuizzes]
-)
+    () => quizzes
+      .filter((quiz) => !isQuizRecent({
+        progress: progressMap.get(quiz.id),
+        createdAt: quiz.createdAt,
+      }))
+      .slice(0, 5),
+    [progressMap, quizzes]
+  )
 
   const recent = useMemo(
-    () => joinRecentQuizzes(quizzes, results),
-    [quizzes, results]
+    () => joinRecentQuizzes(quizzes, progressList),
+    [quizzes, progressList]
   ) 
 
-  const loading = authLoading || quizzesLoading || resultsLoading
+  const loading = authLoading || quizzesLoading || progressLoading
   const streakDays = userProfile?.streakDays ?? userProfile?.streak ?? 0
+
+  useFocusEffect(
+    React.useCallback(() => {
+      refetchProgress()
+      refetchQuizzes()
+    }, [refetchProgress, refetchQuizzes]),
+  )
 
   return (
     <RefreshableScreen onRefresh={pullToRefresh} refreshing={isRefreshing}>

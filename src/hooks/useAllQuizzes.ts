@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { getAllQuizzes } from "@nexo/services/quiz.service"
 import { normalizeQuizzes } from "@nexo/utils/quiz.mapper"
 import type { Quiz } from "@nexo/types/quiz.types"
@@ -7,7 +7,7 @@ export function useAllQuizzes() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const refetch = () => {
+  const refetch = useCallback(() => {
     setLoading(true)
     setError(null)
 
@@ -15,7 +15,7 @@ export function useAllQuizzes() {
       .then(rows => setQuizzes(normalizeQuizzes(rows)))
       .catch(e => setError(e?.message ?? "Failed to load quizzes"))
       .finally(() => setLoading(false))
-  }
+  }, [])
 
   useEffect(() => {
     let mounted = true;

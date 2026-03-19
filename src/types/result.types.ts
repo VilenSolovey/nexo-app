@@ -10,3 +10,16 @@ export type QuizResult = {
   earnedCoins: number
   timeSpent: number
 }
+
+export type UserQuizProgress = {
+  userId: string
+  quizId: string
+  attempts: number
+  passedCount: number  
+  officialScore?: number
+  officialPassed?: boolean
+  bestScore: number    
+  completed: boolean    
+  rewardClaimed: boolean 
+  lastPlayedAt: Timestamp
+}

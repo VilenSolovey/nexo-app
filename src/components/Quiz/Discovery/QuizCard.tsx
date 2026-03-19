@@ -2,6 +2,7 @@ import React from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { Theme } from '@nexo/constants/theme'
 import { Quiz } from '@nexo/types/quiz.types'
+import { formatQuizDurationShort, getQuizDurationSeconds } from '@nexo/utils/quiz-time'
 import {
   QuizCard as StyledQuizCard,
   QuizHeader,
@@ -19,7 +20,7 @@ import {
   RewardItem,
   RewardText,
   PlayButton,
-} from '@nexo/components/Quiz/Quiz.styled'
+} from '@nexo/components/Quiz/Discovery/Quiz.styled'
 
 type Props = {
   quiz: Quiz
@@ -27,6 +28,8 @@ type Props = {
 }
 
 export function QuizCard({ quiz, onPress }: Props) {
+  const durationSeconds = getQuizDurationSeconds(quiz)
+
   return (
     <StyledQuizCard onPress={() => onPress?.(quiz.id)}>
       <QuizHeader>
@@ -48,7 +51,7 @@ export function QuizCard({ quiz, onPress }: Props) {
         </StatItem>
         <StatItem>
           <Ionicons name="time-outline" size={16} color={Theme.textSecondary} />
-          <StatText>{quiz.questionsCount * 30}с</StatText>
+          <StatText>{formatQuizDurationShort(durationSeconds)}</StatText>
         </StatItem>
       </QuizStats>
 
