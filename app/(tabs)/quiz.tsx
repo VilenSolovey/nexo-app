@@ -1,31 +1,51 @@
 import React, { useState } from 'react';
-import { QuizType } from '@nexo/types/quiz.types';
+import { useFocusEffect } from '@react-navigation/native';
+import { QuizType, Quiz } from '@nexo/types/quiz.types';
 import { useAllQuizzes } from '@nexo/hooks/useAllQuizzes';
-import { QuizLayout } from '@nexo/components/Quiz/QuizLayout';
-import { QuizSearchBar } from '@nexo/components/Quiz/QuizSearchBar';
-import { QuizFilterTabs } from '@nexo/components/Quiz/QuizFilterTabs';
-import { QuizCard } from '@nexo/components/Quiz/QuizCard';
-import { Header, HeaderTitle, ScrollContent, LoadingText } from '@nexo/components/Quiz/Quiz.styled';
+import { QuizLayout } from '@nexo/components/Quiz/Discovery/QuizLayout';
+import { QuizSearchBar } from '@nexo/components/Quiz/Discovery/QuizSearchBar';
+import { QuizFilterTabs } from '@nexo/components/Quiz/Discovery/QuizFilterTabs';
+import { QuizCard } from '@nexo/components/Quiz/Discovery/QuizCard';
+import { QuizStartModal } from '@nexo/components/Quiz/Discovery/QuizStartModal';
+import { useAuth } from '@nexo/contexts/AuthProvider';
+import { useUserQuizProgress } from '@nexo/hooks/useUserQuizProgress';
+import { Header, HeaderTitle, ScrollContent, LoadingText } from '@nexo/components/Quiz/Discovery/Quiz.styled';
 import { RefreshControl } from 'react-native'
 import { Theme } from '@nexo/constants/theme'
+import { isQuizRecent } from '@nexo/utils/quiz-progress';
 
 export default function QuizzesScreen() {
+  const { userProfile } = useAuth();
+  const userId = userProfile?.uid ?? userProfile?.id;
   const [searchQuery, setSearchQuery] = useState('');
-  console.log('Search Query:', searchQuery);
+
   const [selectedType, setSelectedType] = useState<QuizType | 'all'>('all');
   const { quizzes, loading, error, refetch: refetchQuizzes } = useAllQuizzes()
+  const { progressMap, refetch: refetchProgress } = useUserQuizProgress(userId)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null)
+  const [showModal, setShowModal] = useState(false)
 
   const handleQuizPress = (quizId: string) => {
-    // TODO: Navigate to quiz screen
-    console.log('Quiz pressed:', quizId)
+    const quiz = quizzes.find(q => q.id === quizId);
+    if (quiz) {
+      setSelectedQuiz(quiz);
+      setShowModal(true);
+    }
+    console.log('Quiz pressed:', quizId);
+  }
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedQuiz(null);
   }
 
   const pullToRefresh = async () => {
     setIsRefreshing(true)
     try {
       await Promise.all([
-        refetchQuizzes?.()
+        refetchQuizzes?.(),
+        refetchProgress?.(),
       ])
     } finally {
       setIsRefreshing(false)
@@ -33,10 +53,22 @@ export default function QuizzesScreen() {
   } 
 
   const filteredQuizzes = quizzes.filter(quiz => {
+    const progress = progressMap.get(quiz.id)
+    const isHidden = isQuizRecent({
+      progress,
+      createdAt: quiz.createdAt,
+    })
     const matchesType = selectedType === `all` || quiz.type === selectedType;
     const matchesSearch = quiz.title.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesType && matchesSearch;
+    return matchesType && matchesSearch && !isHidden;
   });
+
+  useFocusEffect(
+    React.useCallback(() => {
+      refetchQuizzes()
+      refetchProgress()
+    }, [refetchProgress, refetchQuizzes]),
+  )
 
   return (
     <QuizLayout>
@@ -82,6 +114,13 @@ export default function QuizzesScreen() {
         )
       }
       </ScrollContent>
+      
+      <QuizStartModal
+        visible={showModal}
+        quiz={selectedQuiz}
+        progress={selectedQuiz ? progressMap.get(selectedQuiz.id) ?? null : null}
+        onClose={handleCloseModal}
+      />
     </QuizLayout>
   );
 }

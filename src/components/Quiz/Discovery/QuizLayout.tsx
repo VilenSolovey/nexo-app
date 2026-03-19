@@ -26,10 +26,9 @@ export function QuizLayout({ children }: Props) {
     <Gradient colors={[Theme.background, Theme.card]}>
       <Safe>
         <KeyboardAvoidingView
-  behavior={Platform.OS === 'ios' ? 'height' : undefined}
-  style={{ flex: 1 }}
->
-          
+          behavior={Platform.OS === 'ios' ? 'height' : undefined}
+           style={{ flex: 1 }}
+        >   
             <Content>
               {children}
             </Content>

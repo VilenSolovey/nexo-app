@@ -12,8 +12,10 @@ export function normalizeQuizzes(rows: any[]): Quiz[] {
       questionsCount: Array.isArray(r.questions)
         ? r.questions.length
         : Number(r.questions ?? 0),
+      time: typeof r.time === 'number' ? r.time : undefined,
       reward: Number(r.reward ?? 0),
       exp: Number(r.exp ?? 0),
+      createdAt: r.createdAt ?? null,
       description:
         typeof r.description === 'string' ? r.description : undefined,
     }

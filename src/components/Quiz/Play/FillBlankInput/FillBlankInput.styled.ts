@@ -1,0 +1,39 @@
+import styled from 'styled-components/native';
+import { Theme } from '@nexo/constants/theme';
+
+export const Container = styled.View`
+  gap: 12px;
+`;
+
+export const Label = styled.Text`
+  font-size: 16px;
+  font-weight: 600;
+  color: ${Theme.textSecondary};
+`;
+
+export const Input = styled.TextInput`
+  background-color: ${Theme.cardBackground};
+  border-radius: 16px;
+  padding: 16px;
+  font-size: 16px;
+  color: ${Theme.text};
+  border-width: 2px;
+  border-color: ${Theme.cardBorder};
+  min-height: 60px;
+`;
+
+export const HintBox = styled.View`
+  flex-direction: row;
+  align-items: center;
+  background-color: rgba(251, 191, 36, 0.2);
+  padding: 12px;
+  border-radius: 12px;
+  margin-top: 12px;
+  gap: 8px;
+`;
+
+export const HintText = styled.Text`
+  font-size: 14px;
+  color: ${Theme.text};
+  flex: 1;
+`;
