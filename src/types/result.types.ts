@@ -9,6 +9,9 @@ export type QuizResult = {
   total: number
   earnedCoins: number
   timeSpent: number
+  passed?: boolean
+  timeExpired?: boolean
+  earnedExp?: number
 }
 
 export type UserQuizProgress = {

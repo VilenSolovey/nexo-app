@@ -1,11 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Theme } from '@nexo/constants/theme';
 import { useAuth } from '@nexo/contexts/AuthProvider';
-import { doc, updateDoc, increment } from 'firebase/firestore';
-import { db } from '@nexo/services/firebase';
 import { getQuizById } from '@nexo/services/quiz.service';
 import { getQuizProgress, saveQuizAttempt } from '@nexo/services/progress.service';
+import { applyUserRewards, registerDailyActivity } from '@nexo/services/user.service';
 import { getQuizRewardMultiplier, isQuizCompleted, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
 import {
   Container,
@@ -64,14 +63,7 @@ export default function QuizResultScreen() {
       });
   }, [quiz?.id, userId]);
 
-  useEffect(() => {
-    if (userProfile && quiz && attempt !== null && !savedRef.current) {
-      savedRef.current = true;
-      updateUserRewards();
-    }
-  }, [quiz, userProfile, attempt]);
-
-  const updateUserRewards = async () => {
+  const updateUserRewards = useCallback(async () => {
     if (!userId || !quiz) return;
 
     try {
@@ -97,18 +89,36 @@ export default function QuizResultScreen() {
       setMastered(progressResult.mastered);
 
       if (isPassed) {
-        const userRef = doc(db, 'users', userId);
-        await updateDoc(userRef, {
-          coins: increment(finalCoins),
-          exp: increment(finalExp),
-        });
+        await applyUserRewards(userId, {
+          coinsDelta: finalCoins,
+          expDelta: finalExp,
+        })
       }
+
+      await registerDailyActivity(userId)
 
       await refreshUserProfile();
     } catch (error) {
       console.error('Error updating rewards:', error);
     }
-  };
+  }, [
+    attempt,
+    correctCount,
+    isPassed,
+    isTimeExpired,
+    quiz,
+    resolvedTimeSpent,
+    totalCount,
+    refreshUserProfile,
+    userId,
+  ]);
+
+  useEffect(() => {
+    if (userId && quiz && attempt !== null && !savedRef.current) {
+      savedRef.current = true;
+      updateUserRewards();
+    }
+  }, [attempt, quiz, updateUserRewards, userId]);
 
   const getResultEmoji = () => {
     if (percentage === 100) return '🏆';

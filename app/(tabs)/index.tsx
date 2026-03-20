@@ -4,6 +4,7 @@ import { useRouter } from "expo-router"
 import { useFocusEffect } from "@react-navigation/native"
 import { UserContainer, Paragraph } from "@nexo/components/Home/HomeLayout"
 import { Banner } from "@nexo/components/Home/Banner/Banner"
+import { LevelProgressCard } from "@nexo/components/Home/LevelProgressCard/LevelProgressCard"
 import { UserHeader } from "@nexo/components/Home/UserHeader/UserHeader"
 import { StreakCard } from "@nexo/components/Home/StreakCard/StreakCard"
 import { NewsSection } from "@nexo/components/Home/NewSection/NewsSection"
@@ -12,6 +13,7 @@ import { RefreshableScreen } from "@nexo/components/RefreshableScreen"
 import { useAuth } from "@nexo/contexts/AuthProvider"
 import { useAllQuizzes } from "@nexo/hooks/useAllQuizzes"
 import { useUserQuizProgress } from "@nexo/hooks/useUserQuizProgress"
+import { registerDailyActivity } from "@nexo/services/user.service"
 import type { NewsItem, RecentItem } from "@nexo/types/quiz.types"
 import type { UserQuizProgress } from "@nexo/types/result.types"
 import { isQuizRecent, toMillis } from "@nexo/utils/quiz-progress"
@@ -52,7 +54,7 @@ function joinRecentQuizzes(
 
 export default function HomeScreen() {
   const router = useRouter()
-  const { userProfile, loading: authLoading } = useAuth()
+  const { userProfile, loading: authLoading, refreshUserProfile } = useAuth()
   const userId = userProfile?.uid ?? userProfile?.id
   const { quizzes, loading: quizzesLoading, error, refetch: refetchQuizzes } = useAllQuizzes()
   const { progressList, progressMap, loading: progressLoading, refetch: refetchProgress } = useUserQuizProgress(userId)
@@ -90,13 +92,38 @@ export default function HomeScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      refetchProgress()
-      refetchQuizzes()
-    }, [refetchProgress, refetchQuizzes]),
+      let cancelled = false
+
+      const syncDailyProgress = async () => {
+        if (userId) {
+          try {
+            const result = await registerDailyActivity(userId)
+            if (result.changed && !cancelled) {
+              await refreshUserProfile()
+            }
+          } catch (error) {
+            console.error("Failed to register daily activity:", error)
+          }
+        }
+
+        refetchProgress()
+        refetchQuizzes()
+      }
+
+      syncDailyProgress()
+
+      return () => {
+        cancelled = true
+      }
+    }, [refreshUserProfile, refetchProgress, refetchQuizzes, userId]),
   )
 
   return (
-    <RefreshableScreen onRefresh={pullToRefresh} refreshing={isRefreshing}>
+    <RefreshableScreen
+      onRefresh={pullToRefresh}
+      refreshing={isRefreshing}
+      contentContainerStyle={{ paddingBottom: 180 }}
+    >
       <UserContainer>
         <UserHeader
           name={userProfile?.displayName ?? "Guest"}
@@ -104,6 +131,11 @@ export default function HomeScreen() {
           level={userProfile?.level ?? 1}
         />
       </UserContainer>
+
+      <LevelProgressCard
+        level={userProfile?.level ?? 1}
+        exp={userProfile?.exp ?? 0}
+      />
 
       <Banner />
 
