@@ -1,8 +1,7 @@
 import styled from 'styled-components/native'
-import { Theme } from '@nexo/constants/theme'
 
 const Button = styled.TouchableOpacity<{ disabled?: boolean }>`
-  background-color: ${Theme.primary};
+  background-color: ${({ theme }) => theme.primary};
   border-radius: 16px;
   height: 56px;
   justify-content: center;
@@ -14,7 +13,7 @@ const Button = styled.TouchableOpacity<{ disabled?: boolean }>`
 const Label = styled.Text`
   font-size: 18px;
   font-weight: bold;
-  color: ${Theme.background};
+  color: ${({ theme }) => theme.background};
 `
 type Props = {
   children: string

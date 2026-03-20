@@ -3,7 +3,7 @@ import { Platform, KeyboardAvoidingView, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient, LinearGradientProps } from 'expo-linear-gradient'
 import styled from 'styled-components/native'
-import { Theme } from '@nexo/constants/theme'
+import { useAppTheme } from '@nexo/contexts/AppThemeProvider'
 
 type Props = {
   children: React.ReactNode
@@ -30,6 +30,7 @@ const Content = styled.View`
 `
 
 export function AuthLayout({ children }: Props) {
+  const Theme = useAppTheme()
   return (
     <Gradient colors={[Theme.background, Theme.card]}>
       <Safe>

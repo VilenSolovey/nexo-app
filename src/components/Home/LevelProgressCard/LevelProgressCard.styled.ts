@@ -1,4 +1,3 @@
-import { Theme } from "@nexo/constants/theme"
 import { styled } from "styled-components/native"
 
 export const LevelCard = styled.View`
@@ -24,7 +23,7 @@ export const LevelTitleWrap = styled.View`
 `
 
 export const LevelEyebrow = styled.Text`
-  color: ${Theme.exp};
+  color: ${({ theme }) => theme.exp};
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.9px;
@@ -32,7 +31,7 @@ export const LevelEyebrow = styled.Text`
 
 export const LevelTitle = styled.Text`
   margin-top: 4px;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 15px;
   font-weight: 800;
 `
@@ -49,7 +48,7 @@ export const LevelBadge = styled.View`
 `
 
 export const LevelBadgeText = styled.Text`
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 11px;
   font-weight: 800;
 `
@@ -66,7 +65,7 @@ export const LevelProgressTrack = styled.View`
 export const LevelProgressFill = styled.View`
   height: 100%;
   border-radius: 999px;
-  background-color: ${Theme.exp};
+  background-color: ${({ theme }) => theme.exp};
 `
 
 export const LevelMetaRow = styled.View`
@@ -78,7 +77,7 @@ export const LevelMetaRow = styled.View`
 `
 
 export const LevelMetaText = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 11px;
   line-height: 15px;
 `

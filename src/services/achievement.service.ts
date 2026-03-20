@@ -113,11 +113,10 @@ export async function syncUnlockedAchievements(
       return
     }
 
-    const tiersPayload = pendingTiers.reduce<Record<string, { unlockedAt: unknown; claimedAt: unknown }>>(
+    const tiersPayload = pendingTiers.reduce<Record<string, { unlockedAt: unknown }>>(
       (acc, tier) => {
         acc[tier.id] = {
           unlockedAt: serverTimestamp(),
-          claimedAt: currentRecord?.tiers?.[tier.id]?.claimedAt ?? null,
         }
         return acc
       },

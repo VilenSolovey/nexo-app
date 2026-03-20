@@ -32,7 +32,6 @@ export default function QuizzesScreen() {
       setSelectedQuiz(quiz);
       setShowModal(true);
     }
-    console.log('Quiz pressed:', quizId);
   }
 
   const handleCloseModal = () => {

@@ -1,5 +1,4 @@
 import styled from 'styled-components/native';
-import { Theme } from '@nexo/constants/theme';
 
 export const Container = styled.View`
   gap: 12px;
@@ -8,17 +7,17 @@ export const Container = styled.View`
 export const Label = styled.Text`
   font-size: 16px;
   font-weight: 600;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
 `;
 
 export const Input = styled.TextInput`
-  background-color: ${Theme.cardBackground};
+  background-color: ${({ theme }) => theme.cardBackground};
   border-radius: 16px;
   padding: 16px;
   font-size: 16px;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   border-width: 2px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
   min-height: 60px;
 `;
 
@@ -34,6 +33,6 @@ export const HintBox = styled.View`
 
 export const HintText = styled.Text`
   font-size: 14px;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   flex: 1;
 `;

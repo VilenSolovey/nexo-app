@@ -1,6 +1,6 @@
 import styled from 'styled-components/native'
-import { Theme } from '@nexo/constants/theme'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import { useAppTheme } from '@nexo/contexts/AppThemeProvider'
 
 const Header = styled.View`
   align-items: center;
@@ -11,27 +11,28 @@ const LogoContainer = styled.View`
   width: 120px;
   height: 120px;
   border-radius: 60px;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   justify-content: center;
   align-items: center;
   margin-bottom: 24px;
   border-width: 2px;
-  border-color: ${Theme.primary};
+  border-color: ${({ theme }) => theme.primary};
 `
 
 const Title = styled.Text`
   font-size: 48px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   margin-bottom: 8px;
 `
 
 const Subtitle = styled.Text`
   font-size: 18px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
 `
 
 export function AuthHeader({ title, subtitle }: { title: string; subtitle: string }) {
+  const Theme = useAppTheme()
   return (
     <Header>
       <LogoContainer>

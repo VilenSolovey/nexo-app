@@ -1,4 +1,3 @@
-import { Theme } from "@nexo/constants/theme"
 import { styled } from "styled-components/native"
 
 export const StreakBanner = styled.View`
@@ -9,7 +8,7 @@ export const StreakBanner = styled.View`
   flex-direction: row;
   align-items: stretch;
   justify-content: space-between;
-  background-color: ${Theme.shopCard};
+  background-color: ${({ theme }) => theme.shopCard};
   border-width: 1px;
   border-color: rgba(235, 167, 110, 0.22);
   margin-top: 12px;
@@ -21,7 +20,7 @@ export const StreakCopy = styled.View`
 `
 
 export const StreakEyebrow = styled.Text`
-  color: ${Theme.warning};
+  color: ${({ theme }) => theme.warning};
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.9px;
@@ -50,14 +49,14 @@ export const StreakEmoji = styled.Text`
 
 export const StreakText = styled.Text`
   margin-left: 10px;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 17px;
   font-weight: 800;
 `
 
 export const StreakSubText = styled.Text`
   margin-top: 8px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 12px;
   line-height: 16px;
 `
@@ -73,8 +72,8 @@ export const StreakStep = styled.View<{ $filled?: boolean; $active?: boolean }>`
   flex: 1;
   height: 6px;
   border-radius: 999px;
-  background-color: ${({ $filled, $active }) =>
-    $filled ? Theme.warning : $active ? "rgba(235, 167, 110, 0.45)" : "rgba(255, 255, 255, 0.08)"};
+  background-color: ${({ $filled, $active, theme }) =>
+    $filled ? theme.warning : $active ? "rgba(235, 167, 110, 0.45)" : "rgba(255, 255, 255, 0.08)"};
   border-width: ${({ $active }) => ($active ? 1 : 0)}px;
   border-color: rgba(235, 167, 110, 0.28);
 `
@@ -91,14 +90,14 @@ export const StreakRightPanel = styled.View`
 `
 
 export const StreakValue = styled.Text`
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 24px;
   font-weight: 900;
 `
 
 export const StreakValueLabel = styled.Text`
   margin-top: 2px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 11px;
   font-weight: 700;
 `
@@ -113,7 +112,7 @@ export const StreakGoalPill = styled.View`
 `
 
 export const StreakGoalText = styled.Text`
-  color: ${Theme.warning};
+  color: ${({ theme }) => theme.warning};
   font-size: 10px;
   font-weight: 800;
 `

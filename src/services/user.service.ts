@@ -59,6 +59,12 @@ export async function getCurrentUser(userId: string): Promise<UserProfile | null
     streak: Number((raw as any).streak ?? 0),
     lastActiveDate: typeof (raw as any).lastActiveDate === "string" ? (raw as any).lastActiveDate : undefined,
     longestStreak: Number((raw as any).longestStreak ?? 0),
+    achievements: Array.isArray((raw as any).achievements) ? (raw as any).achievements.map(String) : [],
+    inventory: Array.isArray((raw as any).inventory) ? (raw as any).inventory.map(String) : [],
+    selectedThemeId:
+      typeof (raw as any).selectedThemeId === "string" ? (raw as any).selectedThemeId : null,
+    selectedAvatarId:
+      typeof (raw as any).selectedAvatarId === "string" ? (raw as any).selectedAvatarId : null,
     completedQuizzes: Array.isArray((raw as any).completedQuizzes)
       ? (raw as any).completedQuizzes.map((cq: any) => ({
           quizId: String(cq.quizId ?? cq.id ?? ""),
@@ -89,6 +95,12 @@ export function listenUser(userId: string, cb: (u: UserProfile | null) => void) 
       streak: Number((raw as any).streak ?? 0),
       lastActiveDate: typeof (raw as any).lastActiveDate === "string" ? (raw as any).lastActiveDate : undefined,
       longestStreak: Number((raw as any).longestStreak ?? 0),
+      achievements: Array.isArray((raw as any).achievements) ? (raw as any).achievements.map(String) : [],
+      inventory: Array.isArray((raw as any).inventory) ? (raw as any).inventory.map(String) : [],
+      selectedThemeId:
+        typeof (raw as any).selectedThemeId === "string" ? (raw as any).selectedThemeId : null,
+      selectedAvatarId:
+        typeof (raw as any).selectedAvatarId === "string" ? (raw as any).selectedAvatarId : null,
       completedQuizzes: Array.isArray((raw as any).completedQuizzes)
         ? (raw as any).completedQuizzes.map((cq: any) => ({
             quizId: String(cq.quizId ?? cq.id ?? ""),
@@ -208,6 +220,10 @@ export async function createUserIfMissing(uid: string, seed?: Partial<UserProfil
       streakDays: seed?.streakDays ?? 0,
       longestStreak: seed?.longestStreak ?? 0,
       completedQuizzes: [],
+      achievements: seed?.achievements ?? [],
+      inventory: seed?.inventory ?? [],
+      selectedThemeId: seed?.selectedThemeId ?? null,
+      selectedAvatarId: seed?.selectedAvatarId ?? null,
       createdAt: serverTimestamp(),
     })
   }

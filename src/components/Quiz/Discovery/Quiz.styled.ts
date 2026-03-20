@@ -1,6 +1,5 @@
 import styled from 'styled-components/native'
 import { Ionicons } from '@expo/vector-icons'
-import { Theme } from '@nexo/constants/theme'
 
 export const Header = styled.View`
   padding-horizontal: 20px;
@@ -10,34 +9,34 @@ export const Header = styled.View`
 export const HeaderTitle = styled.Text`
   font-size: 32px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
 `
 
 export const SearchContainer = styled.View`
   flex-direction: row;
   align-items: center;
-  background-color: ${Theme.background};
+  background-color: ${({ theme }) => theme.background};
   border-radius: 12px;
   margin-horizontal: 20px;
   margin-bottom: 16px;
   padding-horizontal: 16px;
   border-width: 1px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
 `
 
-export const SearchIcon = styled(Ionicons).attrs({
+export const SearchIcon = styled(Ionicons).attrs(({ theme }) => ({
   name: 'search',
   size: 20,
-  color: Theme.textSecondary,
-})`
+  color: theme.textSecondary,
+}))`
   margin-right: 8px;
 `
 
-export const SearchInput = styled.TextInput.attrs({
-  placeholderTextColor: Theme.text,
-})`
+export const SearchInput = styled.TextInput.attrs(({ theme }) => ({
+  placeholderTextColor: theme.text,
+}))`
   height: 48px;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 16px;
 `
 
@@ -56,16 +55,16 @@ export const FilterTab = styled.TouchableOpacity<{ active?: boolean }>`
   padding-horizontal: 20px;
   padding-vertical: 8px;
   border-radius: 20px;
-  background-color: ${({ active }) => (active ? Theme.icon : Theme.background)};
+  background-color: ${({ active, theme }) => (active ? theme.icon : theme.background)};
   margin-right: 12px;
   border-width: 1px;
-  border-color: ${({ active }) => (active ? Theme.icon : Theme.cardBorder)};
+  border-color: ${({ active, theme }) => (active ? theme.icon : theme.cardBorder)};
 `
 
 export const FilterText = styled.Text<{ active?: boolean }>`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ active }) => (active ? Theme.primary : Theme.textSecondary)};
+  color: ${({ active, theme }) => (active ? theme.primary : theme.textSecondary)};
 `
 
 export const ScrollContent = styled.ScrollView.attrs(() => ({
@@ -78,19 +77,19 @@ export const ScrollContent = styled.ScrollView.attrs(() => ({
 `
 
 export const LoadingText = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   align-self: center;
 `
 
 export const QuizCard = styled.TouchableOpacity`
   width: 100%;
   align-self: stretch;
-  background-color: ${Theme.background};
+  background-color: ${({ theme }) => theme.background};
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 16px;
   border-width: 1px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
 `
 
 export const QuizHeader = styled.View`
@@ -108,7 +107,7 @@ export const QuizBadge = styled.View<{ type: 'trial' | 'spark' }>`
 `
 
 export const QuizBadgeText = styled.Text`
-  color: ${Theme.icon};
+  color: ${({ theme }) => theme.icon};
   font-size: 12px;
   font-weight: bold;
 `
@@ -121,7 +120,7 @@ export const DifficultyBadge = styled.View`
 `
 
 export const DifficultyText = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 12px;
   text-transform: capitalize;
 `
@@ -129,13 +128,13 @@ export const DifficultyText = styled.Text`
 export const QuizTitle = styled.Text`
   font-size: 22px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   margin-bottom: 4px;
 `
 
 export const QuizCategory = styled.Text`
   font-size: 14px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   margin-bottom: 16px;
 `
 
@@ -152,7 +151,7 @@ export const StatItem = styled.View`
 
 export const StatText = styled.Text`
   font-size: 14px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   margin-left: 4px;
 `
 
@@ -175,7 +174,7 @@ export const RewardItem = styled.View`
 export const RewardText = styled.Text`
   font-size: 16px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   margin-left: 4px;
 `
 
@@ -183,7 +182,7 @@ export const PlayButton = styled.View`
   width: 48px;
   height: 48px;
   border-radius: 24px;
-  background-color: ${Theme.icon};
+  background-color: ${({ theme }) => theme.icon};
   justify-content: center;
   align-items: center;
 `

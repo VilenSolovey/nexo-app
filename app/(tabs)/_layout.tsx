@@ -1,17 +1,16 @@
 import React from "react"
-import { Tabs, Redirect, router } from "expo-router"
-import { Theme } from "@nexo/constants/theme"
+import { Tabs, Redirect } from "expo-router"
 import { AnimatedTabIcon } from "@nexo/components/TabBar/AnimatedTabIcon"
+import { useAppTheme } from "@nexo/contexts/AppThemeProvider"
 import { useAuth } from "@nexo/contexts/AuthProvider"
 
 export default function TabsLayout() {
-
+  const Theme = useAppTheme()
   const { user, loading } = useAuth()
 
   if (!loading && !user) {
-    router.push('/(public)/register')
+    return <Redirect href="/(public)/register" />
   }
-
 
   return (
     <Tabs

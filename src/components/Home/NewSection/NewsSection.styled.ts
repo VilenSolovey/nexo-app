@@ -1,6 +1,5 @@
 import { Appearance } from "react-native"
 import styled from "styled-components/native"
-import { Theme } from "@nexo/constants/theme"
 
 
 export const NewsWrap = styled.View`
@@ -22,12 +21,12 @@ export const NewsCard = styled.View<{ $type?: string }>`
   align-items: center;
   position: relative;
 
-  background-color: ${({ $type }) =>
+  background-color: ${({ $type, theme }) =>
     $type === 'spark'
       ? 'rgba(104, 186, 127, 0.20)'
       : $type === 'trial'
       ? 'rgba(165, 243, 252, 0.16)'
-      : Theme.card};
+      : theme.card};
   border-width: 1px;
   border-color: ${({ $type }) =>
     $type === 'spark'
@@ -60,8 +59,8 @@ export const NewsCardCorner = styled.View<{ $type?: string }>`
 export const NewsCardCornerText = styled.Text<{ $type?: string }>`
   font-size: 12px;
   font-weight: 700;
-  color: ${({ $type }) =>
-    $type === 'spark' || $type === 'trial' ? '#1b1b1b' : Theme.text};
+  color: ${({ $type, theme }) =>
+    $type === 'spark' || $type === 'trial' ? '#1b1b1b' : theme.text};
 `;
 
 export const NewsCardTitle = styled.Text`
@@ -69,7 +68,7 @@ export const NewsCardTitle = styled.Text`
   line-height: 26px;
   font-weight: 800;
   text-align: center;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   padding: 0 6px;
 `;
 
@@ -86,33 +85,33 @@ export const NewsBadgesRow = styled.View`
 export const NewsBadge = styled.View<{ $type?: string }>`
   padding: 6px 10px;
   border-radius: 999px;
-  background-color: ${({ $type }) =>
+  background-color: ${({ $type, theme }) =>
     $type === 'spark'
       ? 'rgba(104, 186, 127, 0.20)'
       : $type === 'trial'
       ? 'rgba(165, 243, 252, 0.20)'
-      : Theme.background};
+      : theme.background};
 `;
 
 export const NewsBadgeText = styled.Text<{ $type?: string }>`
   font-weight: 700;
   font-size: 12px;
-  color: ${({ $type }) =>
+  color: ${({ $type, theme }) =>
     $type === 'spark'
       ? '#abccb6ff'
       : $type === 'trial'
       ? '#b9eff7ff'
-      : Theme.text};
+      : theme.text};
 `;
 
 export const SectionTitle = styled.Text`
   font-size: 16px;
   font-weight: 700;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
 `;
 
 export const SeeAll = styled.Text`
-  color: ${Theme.primary};
+  color: ${({ theme }) => theme.primary};
   font-weight: 600;
 `;
 

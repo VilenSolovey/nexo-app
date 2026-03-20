@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons"
-import { Theme } from "@nexo/constants/theme"
 import { styled } from "styled-components/native"
 
 export const AuthForm = styled.View`
@@ -9,12 +8,12 @@ export const AuthForm = styled.View`
 export const AuthInputContainer = styled.View`
   flex-direction: row;
   align-items: center;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   border-radius: 16px;
   margin-bottom: 16px;
   padding-horizontal: 16px;
   border-width: 1px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
 `
 
 export const AuthInputIcon = styled(Ionicons)`
@@ -24,12 +23,12 @@ export const AuthInputIcon = styled(Ionicons)`
 export const AuthInput = styled.TextInput`
   flex: 1;
   height: 56px;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 16px;
 `
 
 export const AuthButton = styled.TouchableOpacity<{ disabled?: boolean }>`
-  background-color: ${Theme.primary};
+  background-color: ${({ theme }) => theme.primary};
   border-radius: 16px;
   height: 56px;
   justify-content: center;
@@ -39,7 +38,7 @@ export const AuthButton = styled.TouchableOpacity<{ disabled?: boolean }>`
 `
 
 export const AuthButtonText = styled.Text`
-  color: ${Theme.primary};
+  color: ${({ theme }) => theme.primary};
   font-size: 18px;
   font-weight: bold;
 `

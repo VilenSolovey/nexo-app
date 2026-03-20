@@ -1,9 +1,16 @@
 import { LinearGradient, LinearGradientProps } from 'expo-linear-gradient'
-import { Theme } from '@nexo/constants/theme'
 import { styled } from 'styled-components/native'
 
 type StatusVariant = 'completed' | 'unlocked' | 'locked'
 type TierVariant = 'claimed' | 'unlocked' | 'locked'
+
+function withAlpha(color: string, alpha: string) {
+  if (color.startsWith('#') && (color.length === 7 || color.length === 4)) {
+    return `${color}${alpha}`
+  }
+
+  return color
+}
 
 export const Screen = styled.View`
   width: 100%;
@@ -25,20 +32,20 @@ export const HeaderCopy = styled.View`
 `
 
 export const Eyebrow = styled.Text`
-  color: ${Theme.primary};
+  color: ${({ theme }) => theme.primary};
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 1.2px;
 `
 
 export const Title = styled.Text`
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 30px;
   font-weight: 800;
 `
 
 export const Subtitle = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 14px;
   line-height: 20px;
 `
@@ -49,9 +56,9 @@ export const HeaderIcon = styled.View`
   border-radius: 18px;
   align-items: center;
   justify-content: center;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   border-width: 1px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
 `
 
 export const HeroCard = styled(LinearGradient)<LinearGradientProps>`
@@ -59,7 +66,7 @@ export const HeroCard = styled(LinearGradient)<LinearGradientProps>`
   border-radius: 24px;
   padding: 18px;
   border-width: 1px;
-  border-color: #35594a;
+  border-color: ${({ theme }) => withAlpha(theme.primary, '40')};
 `
 
 export const HeroTopRow = styled.View`
@@ -72,12 +79,12 @@ export const HeroTopRow = styled.View`
 export const HeroTopCopy = styled.View``;
 
 export const HeroLabel = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 13px;
 `
 
 export const HeroTitle = styled.Text`
-  color: #f6fffa;
+  color: ${({ theme }) => theme.text};
   font-size: 28px;
   font-weight: 800;
   margin-top: 4px;
@@ -90,11 +97,11 @@ export const HeroBadge = styled.View`
   padding-horizontal: 12px;
   padding-vertical: 8px;
   border-radius: 999px;
-  background-color: ${Theme.primary};
+  background-color: ${({ theme }) => theme.primary};
 `
 
 export const HeroBadgeText = styled.Text`
-  color: ${Theme.background};
+  color: ${({ theme }) => theme.background};
   font-size: 13px;
   font-weight: 800;
 `
@@ -115,13 +122,13 @@ export const StatCard = styled.View`
 `
 
 export const StatValue = styled.Text`
-  color: #f6fffa;
+  color: ${({ theme }) => theme.text};
   font-size: 22px;
   font-weight: 800;
 `
 
 export const StatLabel = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 12px;
   margin-top: 6px;
 `
@@ -141,24 +148,24 @@ export const NextAchievementHeader = styled.View`
 `
 
 export const NextAchievementCaption = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 12px;
 `
 
 export const NextAchievementProgress = styled.Text`
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 12px;
   font-weight: 700;
 `
 
 export const NextAchievementTitle = styled.Text`
-  color: #f6fffa;
+  color: ${({ theme }) => theme.text};
   font-size: 16px;
   font-weight: 700;
 `
 
 export const NextAchievementText = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 13px;
   line-height: 18px;
 `
@@ -175,7 +182,7 @@ export const ProgressFill = styled.View<{ $width: string; $background?: string }
   height: 100%;
   width: ${({ $width }) => $width};
   border-radius: 999px;
-  background-color: ${({ $background }) => $background ?? Theme.primary};
+  background-color: ${({ $background, theme }) => $background ?? theme.primary};
 `
 
 export const Section = styled.View`
@@ -191,13 +198,13 @@ export const SectionHeader = styled.View`
 `
 
 export const SectionTitle = styled.Text`
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 18px;
   font-weight: 700;
 `
 
 export const SectionMeta = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 12px;
 `
 
@@ -208,9 +215,9 @@ export const AlmostCard = styled.View`
   gap: 12px;
   border-radius: 18px;
   padding: 14px;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   border-width: 1px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
 `
 
 export const AlmostIconWrap = styled.View<{ $background: string }>`
@@ -228,13 +235,13 @@ export const AlmostCopy = styled.View`
 `
 
 export const AlmostTitle = styled.Text`
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 15px;
   font-weight: 700;
 `
 
 export const AlmostText = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 12px;
 `
 
@@ -244,7 +251,7 @@ export const AlmostProgressWrap = styled.View`
 `
 
 export const AlmostProgressText = styled.Text`
-  color: ${Theme.primary};
+  color: ${({ theme }) => theme.primary};
   font-size: 14px;
   font-weight: 800;
 `
@@ -262,13 +269,13 @@ export const FilterChip = styled.TouchableOpacity<{ $active?: boolean }>`
   padding-horizontal: 14px;
   padding-vertical: 10px;
   border-radius: 999px;
-  background-color: ${({ $active }) => ($active ? Theme.primary : Theme.card)};
+  background-color: ${({ $active, theme }) => ($active ? theme.primary : theme.card)};
   border-width: 1px;
-  border-color: ${({ $active }) => ($active ? Theme.primary : Theme.cardBorder)};
+  border-color: ${({ $active, theme }) => ($active ? theme.primary : theme.cardBorder)};
 `
 
 export const FilterChipText = styled.Text<{ $active?: boolean }>`
-  color: ${({ $active }) => ($active ? Theme.background : Theme.text)};
+  color: ${({ $active, theme }) => ($active ? theme.background : theme.text)};
   font-size: 13px;
   font-weight: 700;
 `
@@ -280,14 +287,14 @@ export const FeedbackCard = styled.View`
   gap: 10px;
   border-radius: 16px;
   padding: 14px;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   border-width: 1px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
 `
 
 export const FeedbackText = styled.Text`
   flex: 1;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 13px;
   line-height: 18px;
 `
@@ -298,9 +305,11 @@ export const AchievementCard = styled.View<{ $unlocked?: boolean }>`
   gap: 14px;
   padding: 16px;
   border-radius: 20px;
-  background-color: ${({ $unlocked }) => ($unlocked ? '#254136' : Theme.card)};
+  background-color: ${({ $unlocked, theme }) =>
+    $unlocked ? withAlpha(theme.primary, '14') : theme.card};
   border-width: 1px;
-  border-color: ${({ $unlocked }) => ($unlocked ? '#3E6A56' : Theme.cardBorder)};
+  border-color: ${({ $unlocked, theme }) =>
+    $unlocked ? withAlpha(theme.primary, '42') : theme.cardBorder};
 `
 
 export const IconContainer = styled.View<{ $background: string }>`
@@ -326,13 +335,13 @@ export const CardHeader = styled.View`
 
 export const CardTitle = styled.Text`
   flex: 1;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 16px;
   font-weight: 700;
 `
 
 export const CardDescription = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 13px;
   line-height: 18px;
 `
@@ -341,23 +350,23 @@ export const StatusBadge = styled.View<{ $variant: StatusVariant }>`
   padding-horizontal: 10px;
   padding-vertical: 6px;
   border-radius: 999px;
-  background-color: ${({ $variant }) =>
+  background-color: ${({ $variant, theme }) =>
     $variant === 'completed'
-      ? '#C6F6D520'
+      ? withAlpha(theme.success, '20')
       : $variant === 'unlocked'
-        ? '#5EEAD420'
+        ? withAlpha(theme.primary, '20')
         : '#FFFFFF10'};
 `
 
 export const StatusBadgeText = styled.Text<{ $variant: StatusVariant }>`
   font-size: 11px;
   font-weight: 800;
-  color: ${({ $variant }) =>
+  color: ${({ $variant, theme }) =>
     $variant === 'completed'
-      ? Theme.success
+      ? theme.success
       : $variant === 'unlocked'
-        ? Theme.primary
-        : Theme.textSecondary};
+        ? theme.primary
+        : theme.textSecondary};
 `
 
 export const TiersRow = styled.View`
@@ -371,29 +380,29 @@ export const TierChip = styled.View<{ $variant: TierVariant }>`
   padding-vertical: 6px;
   border-radius: 999px;
   border-width: 1px;
-  background-color: ${({ $variant }) =>
+  background-color: ${({ $variant, theme }) =>
     $variant === 'claimed'
-      ? '#4ADE8020'
+      ? withAlpha(theme.success, '20')
       : $variant === 'unlocked'
-        ? '#5EEAD420'
+        ? withAlpha(theme.primary, '20')
         : '#FFFFFF08'};
-  border-color: ${({ $variant }) =>
+  border-color: ${({ $variant, theme }) =>
     $variant === 'claimed'
-      ? '#4ADE8060'
+      ? withAlpha(theme.success, '60')
       : $variant === 'unlocked'
-        ? '#5EEAD460'
+        ? withAlpha(theme.primary, '60')
         : '#FFFFFF12'};
 `
 
 export const TierChipText = styled.Text<{ $variant: TierVariant }>`
   font-size: 11px;
   font-weight: 800;
-  color: ${({ $variant }) =>
+  color: ${({ $variant, theme }) =>
     $variant === 'claimed'
-      ? Theme.success
+      ? theme.success
       : $variant === 'unlocked'
-        ? Theme.primary
-        : Theme.textSecondary};
+        ? theme.primary
+        : theme.textSecondary};
 `
 
 export const CardMetaRow = styled.View`
@@ -405,7 +414,7 @@ export const CardMetaRow = styled.View`
 `
 
 export const CardMeta = styled.Text`
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   font-size: 12px;
   font-weight: 600;
 `
@@ -427,17 +436,17 @@ export const ClaimButton = styled.TouchableOpacity<{ $disabledVisual?: boolean }
   border-radius: 14px;
   padding-horizontal: 14px;
   padding-vertical: 12px;
-  background-color: ${Theme.primary};
+  background-color: ${({ theme }) => theme.primary};
   opacity: ${({ $disabledVisual }) => ($disabledVisual ? 0.7 : 1)};
 `
 
 export const ClaimButtonText = styled.Text`
-  color: ${Theme.background};
+  color: ${({ theme }) => theme.background};
   font-size: 13px;
   font-weight: 800;
 `
 
 export const UnlockDate = styled.Text`
-  color: ${Theme.textTertiary};
+  color: ${({ theme }) => theme.textTertiary};
   font-size: 11px;
 `

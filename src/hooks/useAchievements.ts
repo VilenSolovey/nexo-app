@@ -70,11 +70,14 @@ function buildAchievements(
   return ACHIEVEMENTS.map((achievement) => {
     const current = metrics[achievement.metric] ?? 0
     const record = recordIndex.get(achievement.id)
+    const highestUnlockedFromRecord = record?.highestUnlockedTier ?? -1
+    const highestClaimedFromRecord = record?.highestClaimedTier ?? -1
 
     const tiers: AchievementTierViewModel[] = achievement.tiers.map((tier, index) => {
       const storedTier = record?.tiers?.[tier.id]
-      const unlocked = Boolean(storedTier?.unlockedAt) || current >= tier.target
-      const claimed = Boolean(storedTier?.claimedAt)
+      const unlocked =
+        Boolean(storedTier?.unlockedAt) || highestUnlockedFromRecord >= index || current >= tier.target
+      const claimed = Boolean(storedTier?.claimedAt) || highestClaimedFromRecord >= index
 
       return {
         ...tier,
@@ -260,12 +263,33 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
         const result = await claimAchievementReward(userId, achievementId, tierId)
         const claimedAt = new Date().toISOString()
 
-        setUserAchievements((current) =>
-          current.map((record) => {
+        setUserAchievements((current) => {
+          const existingRecord = current.find((record) => record.achievementId === achievementId)
+
+          if (!existingRecord) {
+            return [
+              ...current,
+              {
+                achievementId,
+                highestUnlockedTier: tierIndex,
+                highestClaimedTier: tierIndex,
+                tiers: {
+                  [tierId]: {
+                    unlockedAt: claimedAt,
+                    claimedAt,
+                  },
+                },
+                updatedAt: claimedAt,
+              },
+            ]
+          }
+
+          return current.map((record) => {
             if (record.achievementId !== achievementId) return record
 
             return {
               ...record,
+              highestUnlockedTier: Math.max(record.highestUnlockedTier, tierIndex),
               highestClaimedTier: Math.max(record.highestClaimedTier, tierIndex),
               tiers: {
                 ...record.tiers,
@@ -276,15 +300,17 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
               },
               updatedAt: claimedAt,
             }
-          }),
-        )
+          })
+        })
+
+        await refetch()
 
         return result
       } finally {
         setClaimingKey(null)
       }
     },
-    [userId],
+    [refetch, userId],
   )
 
   const groupedAchievements = useMemo<GroupedAchievements[]>(

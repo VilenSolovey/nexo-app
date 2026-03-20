@@ -1,6 +1,6 @@
 import React from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { Theme } from '@nexo/constants/theme'
+import { useAppTheme } from '@nexo/contexts/AppThemeProvider'
 import {
   HeroBadge,
   HeroBadgeText,
@@ -37,9 +37,11 @@ type AchievementsHeroProps = {
 }
 
 export function AchievementsHero({ summary }: AchievementsHeroProps) {
+  const Theme = useAppTheme()
+
   return (
     <HeroCard
-      colors={['#29473D', '#1D3129']}
+      colors={[Theme.card, Theme.cardBackground]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >

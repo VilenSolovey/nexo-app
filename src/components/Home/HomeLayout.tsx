@@ -1,6 +1,5 @@
 import { Appearance } from "react-native"
 import { SafeAreaView as SafeArea } from "react-native-safe-area-context"
-import { Theme } from "@nexo/constants/theme"
 import styled from "styled-components/native"
 
 
@@ -8,7 +7,7 @@ export const HomeSafeArea = styled(SafeArea).attrs({
   edges: ["top", "right", "left", "bottom"],
 })`
   flex: 1;
-  background-color: ${Theme.background};
+  background-color: ${({ theme }) => theme.background};
 `
 
 export const HomeScroll = styled.ScrollView.attrs({
@@ -38,13 +37,13 @@ export const HeaderRow = styled.View`
 
 export const HomeTitle = styled.Text`
   font-size: 18px;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-weight: 600;
 
 `
 
 export const QuizCard = styled.View`
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   padding: 16px;
   border-radius: 12px;
   margin-bottom: 10px;
@@ -54,7 +53,7 @@ export const Banner = styled.View`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  background-color: ${Theme.primary};
+  background-color: ${({ theme }) => theme.primary};
   padding: 16px;
   border-radius: 16px;
 `;
@@ -78,5 +77,5 @@ export const StatusPill = styled.View`
 
 export const Paragraph = styled.Text`
   font-size: 13px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
 `

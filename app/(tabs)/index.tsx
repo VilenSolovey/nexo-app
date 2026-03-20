@@ -16,6 +16,7 @@ import { useUserQuizProgress } from "@nexo/hooks/useUserQuizProgress"
 import { registerDailyActivity } from "@nexo/services/user.service"
 import type { NewsItem, RecentItem } from "@nexo/types/quiz.types"
 import type { UserQuizProgress } from "@nexo/types/result.types"
+import { getAvatarSeed } from "@nexo/utils/profile-customization"
 import { isQuizRecent, toMillis } from "@nexo/utils/quiz-progress"
 
 function joinRecentQuizzes(
@@ -89,6 +90,10 @@ export default function HomeScreen() {
 
   const loading = authLoading || quizzesLoading || progressLoading
   const streakDays = userProfile?.streakDays ?? userProfile?.streak ?? 0
+  const avatarSeed = getAvatarSeed(
+    userProfile?.selectedAvatarId,
+    userProfile?.displayName ?? userProfile?.email ?? "Guest",
+  )
 
   useFocusEffect(
     React.useCallback(() => {
@@ -129,6 +134,7 @@ export default function HomeScreen() {
           name={userProfile?.displayName ?? "Guest"}
           coins={userProfile?.coins ?? 0}
           level={userProfile?.level ?? 1}
+          avatarSeed={avatarSeed}
         />
       </UserContainer>
 

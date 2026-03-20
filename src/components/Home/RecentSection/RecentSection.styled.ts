@@ -1,6 +1,5 @@
 import { Appearance } from "react-native"
 import styled from "styled-components/native"
-import { Theme } from "@nexo/constants/theme"
 import { QuizCard, StatusPill } from "@nexo/components/Home/HomeLayout";
 
 
@@ -19,17 +18,17 @@ export const SectionHeader = styled.View`
 export const SectionTitle = styled.Text`
   font-size: 16px;
   font-weight: 700;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
 `;
 
 export const SeeAll = styled.Text`
-  color: ${Theme.primary};
+  color: ${({ theme }) => theme.primary};
   font-weight: 600;
 `;
 
 export const QuizTitle = styled.Text`
   font-weight: 700;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
 `;
 
 export const QuizLeft = styled.View`

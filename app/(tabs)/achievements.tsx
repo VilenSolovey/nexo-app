@@ -69,6 +69,7 @@ export default function AchievementsScreen() {
         `+${reward.rewardCoins} Nexons${reward.rewardExp ? ` і +${reward.rewardExp} EXP` : ''}`,
       )
     } catch (claimError: any) {
+      await Promise.all([refetch(), refreshUserProfile()])
       Alert.alert('Не вдалося забрати нагороду', claimError?.message ?? 'Спробуйте ще раз')
     }
   }

@@ -1,13 +1,12 @@
 import styled from 'styled-components/native';
-import { Theme } from '@nexo/constants/theme';
 
 export const Card = styled.View`
-  background-color: ${Theme.cardBackground};
+  background-color: ${({ theme }) => theme.cardBackground};
   border-radius: 24px;
   padding: 24px;
   margin-bottom: 24px;
   border-width: 1px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
   shadow-color: #000;
   shadow-opacity: 0.12;
   shadow-radius: 16px;
@@ -33,7 +32,7 @@ export const TypeChip = styled.View`
 
 export const TypeChipText = styled.Text`
   font-size: 12px;
-  color: ${Theme.accent};
+  color: ${({ theme }) => theme.accent};
   font-weight: 700;
   margin-left: 8px;
   letter-spacing: 0.3px;
@@ -43,7 +42,7 @@ export const TypeChipText = styled.Text`
 export const QuestionText = styled.Text`
   font-size: 28px;
   font-weight: 800;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   line-height: 36px;
   letter-spacing: -0.3px;
 `;

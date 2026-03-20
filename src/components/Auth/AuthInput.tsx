@@ -1,11 +1,11 @@
+import { useAppTheme } from '@nexo/contexts/AppThemeProvider'
 import styled from 'styled-components/native'
-import { Theme } from '@nexo/constants/theme'
 
 
 const Container = styled.View`
   flex-direction: row;
   align-items: center;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   border-radius: 16px;
   padding: 0 16px;
   margin-bottom: 16px;
@@ -14,11 +14,12 @@ const Container = styled.View`
 const Input = styled.TextInput`
   flex: 1;
   height: 56px;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 16px;
 `
 
 export function AuthInput({ ...props }) {
+  const Theme = useAppTheme()
   return (
     <Container>
       <Input

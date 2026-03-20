@@ -1,6 +1,6 @@
 import styled from 'styled-components/native'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { Theme } from '@nexo/constants/theme'
+import { useAppTheme } from '@nexo/contexts/AppThemeProvider'
 
 type Props = {
   icon: keyof typeof Ionicons.glyphMap
@@ -8,6 +8,7 @@ type Props = {
 }
 
 export function AuthFeature({ icon, text }: Props) {
+  const Theme = useAppTheme()
   return (
     <Row>
       <Ionicons name={icon} size={22} color={Theme.icon} />
@@ -25,5 +26,5 @@ const Row = styled.View`
 
 const Label = styled.Text`
   font-size: 15px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
 `

@@ -1,5 +1,4 @@
 import styled from "styled-components/native"
-import { Theme } from "@nexo/constants/theme"
 
 export const Container = styled.View`
   flex: 1;
@@ -23,7 +22,7 @@ export const ScrollContent = styled.ScrollView.attrs({
 
 export const ErrorText = styled.Text`
   font-size: 18px;
-  color: ${Theme.error};
+  color: ${({ theme }) => theme.error};
   text-align: center;
   margin-top: 40px;
 `
