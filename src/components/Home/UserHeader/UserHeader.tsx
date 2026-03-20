@@ -1,4 +1,5 @@
 import React from "react"
+import { Avatar } from "@nexo/components/Home/Avatar"
 import { HomeTitle, Paragraph } from "@nexo/components/Home/HomeLayout"
 
 import { HeaderRow, UserLeft, NameWrap, CoinsWrap, CoinsLabel, CoinsPill, CoinsText, LevelPill, LevelText } from "@nexo/components/Home/UserHeader/UserHeader.styled"
@@ -8,7 +9,6 @@ type Props = {
   coins?: number
   level?: number
 }
-import { Avatar } from "@nexo/components/Home/Avatar"
 export const UserHeader: React.FC<Props> = ({ name = "Guest", coins = 0, level }) => {
 
   return (
@@ -26,10 +26,9 @@ export const UserHeader: React.FC<Props> = ({ name = "Guest", coins = 0, level }
         <CoinsPill>
           <CoinsText>{coins}</CoinsText>
         </CoinsPill>
-        {/* TODO: Implement level system */}
-          {/* <LevelPill>
-            <LevelText>Lv 5</LevelText>
-          </LevelPill> */}
+        <LevelPill>
+          <LevelText>Lv {level ?? 1}</LevelText>
+        </LevelPill>
         
       </CoinsWrap>
     </HeaderRow>

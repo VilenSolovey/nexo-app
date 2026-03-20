@@ -19,4 +19,6 @@ export interface UserProfile {
   achievements?: string[]
   inventory?: string[]
   createdAt?: string
+  lastActiveDate?: string
+  longestStreak?: number
 }

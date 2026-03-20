@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react'
-import { ScrollView, RefreshControl } from 'react-native'
+import { RefreshControl, StyleProp, ViewStyle } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import styled from 'styled-components/native'
 import { Theme } from '@nexo/constants/theme'
@@ -8,6 +8,7 @@ type Props = {
   children: ReactNode
   onRefresh?: () => void | Promise<void>
   refreshing?: boolean
+  contentContainerStyle?: StyleProp<ViewStyle>
 }
 
 const SafeArea = styled(SafeAreaView).attrs({
@@ -18,17 +19,23 @@ const SafeArea = styled(SafeAreaView).attrs({
 `
 
 const StyledScrollView = styled.ScrollView.attrs({
-  contentContainerStyle: {
-    padding: 16,
-    alignItems: 'center',
-    flexGrow: 1,
-  },
   showsVerticalScrollIndicator: false,
 })`
   flex: 1;
 `
 
-export function RefreshableScreen({ children, onRefresh, refreshing = false }: Props) {
+const defaultContentContainerStyle: ViewStyle = {
+  padding: 16,
+  alignItems: 'center',
+  flexGrow: 1,
+}
+
+export function RefreshableScreen({
+  children,
+  onRefresh,
+  refreshing = false,
+  contentContainerStyle,
+}: Props) {
   const refreshControl = onRefresh ? (
     <RefreshControl
       refreshing={refreshing}
@@ -40,7 +47,10 @@ export function RefreshableScreen({ children, onRefresh, refreshing = false }: P
 
   return (
     <SafeArea>
-      <StyledScrollView refreshControl={refreshControl}>
+      <StyledScrollView
+        refreshControl={refreshControl}
+        contentContainerStyle={[defaultContentContainerStyle, contentContainerStyle]}
+      >
         {children}
       </StyledScrollView>
     </SafeArea>
