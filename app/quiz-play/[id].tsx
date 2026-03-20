@@ -375,7 +375,6 @@ export default function QuizPlayScreen() {
   };
 
   const renderQuestion = () => {
-    console.log(currentQuestion.type);
     switch (normalizedQuestionType) {
       case 'single_answer':
         return (

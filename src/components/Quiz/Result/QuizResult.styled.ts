@@ -1,7 +1,6 @@
 import styled from 'styled-components/native'
 import { LinearGradient, LinearGradientProps } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Theme } from '@nexo/constants/theme'
 
 export const Container = styled(LinearGradient)<LinearGradientProps>`
   flex: 1;
@@ -28,7 +27,7 @@ export const ScrollContent = styled.ScrollView.attrs({
 export const TimeBanner = styled.View`
   flex-direction: row;
   align-items: center;
-  background-color: ${Theme.error};
+  background-color: ${({ theme }) => theme.error};
   border-radius: 12px;
   padding-vertical: 10px;
   padding-horizontal: 16px;
@@ -55,11 +54,11 @@ export const AttemptBanner = styled.View`
   column-gap: 8px;
   width: 100%;
   border-width: 1px;
-  border-color: ${Theme.warning};
+  border-color: ${({ theme }) => theme.warning};
 `
 
 export const AttemptBannerText = styled.Text`
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 14px;
   flex-shrink: 1;
 `
@@ -67,7 +66,7 @@ export const AttemptBannerText = styled.Text`
 export const MasteredBanner = styled.View`
   flex-direction: row;
   align-items: center;
-  background-color: ${Theme.primary};
+  background-color: ${({ theme }) => theme.primary};
   border-radius: 12px;
   padding-vertical: 10px;
   padding-horizontal: 16px;
@@ -87,12 +86,12 @@ export const IconContainer = styled.View`
   width: 120px;
   height: 120px;
   border-radius: 60px;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   justify-content: center;
   align-items: center;
   margin-bottom: 24px;
   border-width: 2px;
-  border-color: ${Theme.primary};
+  border-color: ${({ theme }) => theme.primary};
 `
 
 export const ResultEmoji = styled.Text`
@@ -102,14 +101,14 @@ export const ResultEmoji = styled.Text`
 export const ResultTitle = styled.Text`
   font-size: 32px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   margin-bottom: 12px;
   text-align: center;
 `
 
 export const ResultMessage = styled.Text`
   font-size: 16px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   text-align: center;
   margin-bottom: 32px;
   padding-horizontal: 20px;
@@ -117,12 +116,12 @@ export const ResultMessage = styled.Text`
 
 export const ScoreCard = styled.View`
   width: 100%;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   border-radius: 20px;
   padding: 24px;
   margin-bottom: 20px;
   border-width: 1px;
-  border-color: ${Theme.card};
+  border-color: ${({ theme }) => theme.card};
   align-items: center;
 `
 
@@ -135,18 +134,18 @@ export const ScoreCircle = styled.View`
   align-items: center;
   margin-bottom: 24px;
   border-width: 4px;
-  border-color: ${Theme.primary};
+  border-color: ${({ theme }) => theme.primary};
 `
 
 export const ScorePercentage = styled.Text`
   font-size: 48px;
   font-weight: bold;
-  color: ${Theme.primary};
+  color: ${({ theme }) => theme.primary};
 `
 
 export const ScoreLabel = styled.Text`
   font-size: 14px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   margin-top: 4px;
 `
 
@@ -163,30 +162,30 @@ export const ScoreDetailItem = styled.View`
 
 export const ScoreDetailText = styled.Text`
   font-size: 16px;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
 `
 
 export const RewardsCard = styled.View`
   width: 100%;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   border-radius: 20px;
   padding: 24px;
   margin-bottom: 20px;
   border-width: 1px;
-  border-color: ${Theme.primary};
+  border-color: ${({ theme }) => theme.primary};
 `
 
 export const RewardsTitle = styled.Text`
   font-size: 20px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   margin-bottom: 16px;
   text-align: center;
 `
 
 export const RewardsReducedNote = styled.Text`
   font-size: 13px;
-  color: ${Theme.warning};
+  color: ${({ theme }) => theme.warning};
   text-align: center;
   margin-bottom: 12px;
 `
@@ -203,19 +202,19 @@ export const RewardItem = styled.View`
 export const RewardValue = styled.Text`
   font-size: 24px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   margin-top: 8px;
 `
 
 export const RewardOriginal = styled.Text`
   font-size: 12px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   text-decoration-line: line-through;
 `
 
 export const RewardLabel = styled.Text`
   font-size: 14px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   margin-top: 4px;
 `
 
@@ -228,7 +227,7 @@ export const RetryButton = styled.TouchableOpacity`
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  background-color: ${Theme.warning};
+  background-color: ${({ theme }) => theme.warning};
   border-radius: 12px;
   padding-vertical: 16px;
   column-gap: 8px;
@@ -237,23 +236,23 @@ export const RetryButton = styled.TouchableOpacity`
 export const RetryButtonText = styled.Text`
   font-size: 16px;
   font-weight: bold;
-  color: ${Theme.primary};
+  color: ${({ theme }) => theme.primary};
 `
 
 export const HomeButton = styled.TouchableOpacity`
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   border-radius: 12px;
   padding-vertical: 16px;
   column-gap: 8px;
   border-width: 1px;
-  border-color: ${Theme.card};
+  border-color: ${({ theme }) => theme.card};
 `
 
 export const HomeButtonText = styled.Text`
   font-size: 16px;
   font-weight: 600;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
 `

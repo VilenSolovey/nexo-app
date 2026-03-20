@@ -41,6 +41,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       completedQuizzes: [],
       achievements: [],
       inventory: [],
+      selectedThemeId: null,
+      selectedAvatarId: null,
       createdAt: now,
     };
 
@@ -57,17 +59,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const exp = Number(data.exp ?? 0)
       const normalizedLevel = getLevelFromExp(exp)
       const storedLevel = Number(data.level ?? 1)
+      const storedEmail = typeof data.email === 'string' ? data.email.trim() : ''
+      const fallbackEmail = auth.currentUser?.email?.trim() ?? ''
+      const resolvedEmail = storedEmail || fallbackEmail
+      const profileUpdates: Partial<UserProfile> = {}
 
       if (normalizedLevel !== storedLevel) {
-        await updateDoc(docRef, {
-          level: normalizedLevel,
-        })
+        profileUpdates.level = normalizedLevel
+      }
+
+      if (!storedEmail && fallbackEmail) {
+        profileUpdates.email = fallbackEmail
+      }
+
+      if (Object.keys(profileUpdates).length > 0) {
+        await updateDoc(docRef, profileUpdates)
       }
 
       return {
         ...data,
         id: uid,
         uid,
+        email: resolvedEmail,
         exp,
         level: normalizedLevel,
       };

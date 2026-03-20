@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react'
 import { RefreshControl, StyleProp, ViewStyle } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import styled from 'styled-components/native'
-import { Theme } from '@nexo/constants/theme'
+import { useAppTheme } from '@nexo/contexts/AppThemeProvider'
 
 type Props = {
   children: ReactNode
@@ -15,7 +15,7 @@ const SafeArea = styled(SafeAreaView).attrs({
   edges: ['top', 'right', 'left', 'bottom'],
 })`
   flex: 1;
-  background-color: ${Theme.background};
+  background-color: ${({ theme }) => theme.background};
 `
 
 const StyledScrollView = styled.ScrollView.attrs({
@@ -36,6 +36,7 @@ export function RefreshableScreen({
   refreshing = false,
   contentContainerStyle,
 }: Props) {
+  const Theme = useAppTheme()
   const refreshControl = onRefresh ? (
     <RefreshControl
       refreshing={refreshing}

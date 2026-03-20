@@ -1,10 +1,9 @@
-import { Theme } from "@nexo/constants/theme";
 import { LinearGradient } from "expo-linear-gradient";
 import styled from "styled-components/native";
 
 export const Container = styled.View`
   flex: 1;
-  background-color: ${Theme.background};
+  background-color: ${({ theme }) => theme.background};
 `
 
 export const SafeArea = styled.SafeAreaView`
@@ -23,7 +22,7 @@ export const BackButton = styled.TouchableOpacity`
   width: 40px;
   height: 40px;
   border-radius: 20px;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   justify-content: center;
   align-items: center;
 `
@@ -31,7 +30,7 @@ export const BackButton = styled.TouchableOpacity`
 export const HeaderTitle = styled.Text`
   font-size: 18px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
 `
 
 export const HeaderPlaceholder = styled.View`
@@ -47,12 +46,12 @@ export const ScrollContent = styled.ScrollView.attrs({
 })``
 
 export const QuizCardContainer = styled.View`
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   border-radius: 20px;
   padding: 24px;
   margin-bottom: 24px;
   border-width: 1px;
-  border-color: ${Theme.card};
+  border-color: ${({ theme }) => theme.card};
 `
 
 export const QuizHeader = styled.View`
@@ -72,7 +71,7 @@ export const QuizBadge = styled.View<{ type: 'trial' | 'spark' }>`
 `
 
 export const QuizBadgeText = styled.Text`
-  color: ${Theme.primary};
+  color: ${({ theme }) => theme.primary};
   font-size: 12px;
   font-weight: bold;
 `
@@ -86,7 +85,7 @@ export const DifficultyContainer = styled.View`
   border-radius: 8px;
 `
 export const DifficultyText = styled.Text`
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 12px;
   font-weight: 600;
   margin-left: 4px;
@@ -97,13 +96,13 @@ export const DifficultyText = styled.Text`
 export const QuizTitle = styled.Text`
   font-size: 28px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   margin-bottom: 8px;
 `
 
 export const QuizCategory = styled.Text`
   font-size: 16px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   margin-bottom: 24px;
 `
 
@@ -120,13 +119,13 @@ export const StatBox = styled.View`
 export const StatValue = styled.Text`
   font-size: 20px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   margin-top: 8px;
 `
 
 export const StatLabel = styled.Text`
   font-size: 12px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   margin-top: 4px;
 `
 
@@ -137,7 +136,7 @@ export const Section = styled.View`
 export const SectionTitle = styled.Text`
   font-size: 20px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   margin-bottom: 16px;
 `
 
@@ -148,26 +147,26 @@ export const QuestionTypesContainer = styled.View`
 export const TypeChip = styled.View`
   flex-direction: row;
   align-items: center;
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   padding-horizontal: 16px;
   padding-vertical: 12px;
   border-radius: 12px;
   border-width: 1px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
 `
 
 export const TypeText = styled.Text`
   font-size: 14px;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   margin-left: 8px;
 `
 
 export const TipsContainer = styled.View`
-  background-color: ${Theme.card};
+  background-color: ${({ theme }) => theme.card};
   border-radius: 12px;
   padding: 16px;
   border-width: 1px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
 `
 
 export const TipItem = styled.View`
@@ -178,7 +177,7 @@ export const TipItem = styled.View`
 
 export const TipText = styled.Text`
   font-size: 14px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   margin-left: 12px;
   flex: 1;
 `
@@ -189,9 +188,9 @@ export const BottomContainer = styled.View`
   left: 0;
   right: 0;
   padding: 20px;
-  background-color: ${Theme.background};
+  background-color: ${({ theme }) => theme.background};
   border-top-width: 1px;
-  border-top-color: ${Theme.cardBorder};
+  border-top-color: ${({ theme }) => theme.cardBorder};
 `
 
 export const StartButton = styled.View`
@@ -210,11 +209,11 @@ export const StartButtonGradient = styled(LinearGradient)`
 export const StartButtonText = styled.Text`
   font-size: 18px;
   font-weight: bold;
-  color: ${Theme.primary};
+  color: ${({ theme }) => theme.primary};
 `
 export const ErrorText = styled.Text`
   font-size: 18px;
-  color: ${Theme.error};
+  color: ${({ theme }) => theme.error};
   text-align: center;
   margin-top: 40px;
 `
@@ -250,14 +249,14 @@ export const ModalIconContainer = styled.View`
 export const ModalTitle = styled.Text`
   font-size: 24px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   text-align: center;
   margin-bottom: 8px;
 `
 
 export const ModalSubtitle = styled.Text`
   font-size: 16px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   text-align: center;
   margin-bottom: 24px;
 `
@@ -279,7 +278,7 @@ export const RewardPreviewItem = styled.View`
 
 export const RewardLabel = styled.Text`
   font-size: 12px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
   margin-bottom: 8px;
 `
 
@@ -292,11 +291,11 @@ export const RewardValue = styled.View`
 export const RewardText = styled.Text`
   font-size: 20px;
   font-weight: bold;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
 `
 
 export const RewardTextSuccess = styled(RewardText)`
-  color: ${Theme.success};
+  color: ${({ theme }) => theme.success};
 `
 
 export const ModalInfo = styled.View`
@@ -308,7 +307,7 @@ export const ModalInfo = styled.View`
 
 export const ModalInfoText = styled.Text`
   font-size: 14px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
 `
 
 export const ModalActions = styled.View`
@@ -316,7 +315,7 @@ export const ModalActions = styled.View`
 `
 
 export const ModalButtonPrimary = styled.TouchableOpacity`
-  background-color: ${Theme.primary};
+  background-color: ${({ theme }) => theme.primary};
   border-radius: 12px;
   padding-vertical: 16px;
   align-items: center;
@@ -325,7 +324,7 @@ export const ModalButtonPrimary = styled.TouchableOpacity`
 export const ModalButtonPrimaryText = styled.Text`
   font-size: 16px;
   font-weight: bold;
-  color: ${Theme.card};
+  color: ${({ theme }) => theme.card};
 `
 
 export const ModalButtonSecondary = styled.TouchableOpacity`
@@ -334,11 +333,11 @@ export const ModalButtonSecondary = styled.TouchableOpacity`
   padding-vertical: 16px;
   align-items: center;
   border-width: 1px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
 `
 
 export const ModalButtonSecondaryText = styled.Text`
   font-size: 16px;
   font-weight: 600;
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
 `

@@ -1,5 +1,4 @@
 import styled from 'styled-components/native';
-import { Theme } from '@nexo/constants/theme';
 
 export const Header = styled.View`
   flex-direction: row;
@@ -45,7 +44,7 @@ export const TimerBadge = styled.View`
   border-radius: 22px;
   background-color: rgba(255, 255, 255, 0.06);
   border-width: 1px;
-  border-color: ${Theme.cardBorder};
+  border-color: ${({ theme }) => theme.cardBorder};
   flex-direction: row;
   align-items: center;
   justify-content: center;
@@ -53,7 +52,7 @@ export const TimerBadge = styled.View`
 `
 
 export const TimerText = styled.Text`
-  color: ${Theme.text};
+  color: ${({ theme }) => theme.text};
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.2px;

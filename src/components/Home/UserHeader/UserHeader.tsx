@@ -8,13 +8,14 @@ type Props = {
   name?: string
   coins?: number
   level?: number
+  avatarSeed?: string
 }
-export const UserHeader: React.FC<Props> = ({ name = "Guest", coins = 0, level }) => {
+export const UserHeader: React.FC<Props> = ({ name = "Guest", coins = 0, level, avatarSeed }) => {
 
   return (
     <HeaderRow>
       <UserLeft>
-      <Avatar seed={name ?? "guest"} size={55} />
+      <Avatar seed={avatarSeed ?? name ?? "guest"} size={55} />
         <NameWrap>
           <HomeTitle>Привіт, {name}</HomeTitle>
           <Paragraph>Готовий перемагати?</Paragraph>

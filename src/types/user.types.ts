@@ -18,6 +18,8 @@ export interface UserProfile {
   completedQuizzes?: CompletedQuiz[]
   achievements?: string[]
   inventory?: string[]
+  selectedThemeId?: string | null
+  selectedAvatarId?: string | null
   createdAt?: string
   lastActiveDate?: string
   longestStreak?: number

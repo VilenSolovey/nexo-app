@@ -1,6 +1,5 @@
 import { Appearance } from "react-native"
 import styled from "styled-components/native"
-import { Theme } from "@nexo/constants/theme"
 
 
 export const HeaderRow = styled.View`
@@ -34,19 +33,19 @@ export const CoinsWrap = styled.View`
 
 export const CoinsLabel = styled.Text`
   font-size: 12px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
 `
 
 export const CoinsPill = styled.View`
   margin-top: 6px;
-  background-color: ${Theme.text};
+  background-color: ${({ theme }) => theme.text};
   padding: 6px 10px;
   border-radius: 20px;
 `
 
 export const CoinsText = styled.Text`
   font-weight: bold;
-  color: ${Theme.background};
+  color: ${({ theme }) => theme.background};
 `
 
 export const LevelPill = styled.View`
@@ -61,5 +60,5 @@ export const LevelPill = styled.View`
 
 export const LevelText = styled.Text`
   font-weight: 700;
-  color: ${Theme.background};
+  color: ${({ theme }) => theme.background};
 `

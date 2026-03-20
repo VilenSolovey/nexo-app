@@ -1,6 +1,5 @@
 import React from 'react'
 import styled from 'styled-components/native'
-import { Theme } from '@nexo/constants/theme'
 
 type Props = {
   text: string
@@ -16,13 +15,13 @@ const Container = styled.TouchableOpacity`
 
 const TextSecondary = styled.Text`
   font-size: 16px;
-  color: ${Theme.textSecondary};
+  color: ${({ theme }) => theme.textSecondary};
 `
 
 const TextAction = styled.Text`
   font-size: 16px;
   font-weight: bold;
-  color: ${Theme.primary};
+  color: ${({ theme }) => theme.primary};
 `
 
 export function AuthLink({ text, action, onPress }: Props) {
