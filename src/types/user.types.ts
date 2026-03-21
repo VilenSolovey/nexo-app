@@ -10,6 +10,7 @@ export interface UserProfile {
   email: string
   displayName: string
   coins: number
+  consumables?: Record<string, number>
   exp: number
   level: number
   streak: number

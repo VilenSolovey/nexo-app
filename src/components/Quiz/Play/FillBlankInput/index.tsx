@@ -8,10 +8,10 @@ interface FillBlankInputProps {
   onChange: (text: string) => void;
   type: string; 
   showHint: boolean;
-  explanation?: string;
+  hint?: string;
 }
 
-export function FillBlankInput({ value, onChange, type, showHint, explanation }: FillBlankInputProps) {
+export function FillBlankInput({ value, onChange, type, showHint, hint }: FillBlankInputProps) {
   const normalized = String(type || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
   const isFill = normalized === 'fill_blank' || normalized.includes('fill');
 
@@ -28,10 +28,10 @@ export function FillBlankInput({ value, onChange, type, showHint, explanation }:
         autoCapitalize="sentences"
         autoCorrect={false}
       />
-      {showHint && explanation && (
+      {showHint && hint && (
         <HintBox>
           <Ionicons name="bulb" size={20} color={Theme.warning} />
-          <HintText>{explanation}</HintText>
+          <HintText>{hint}</HintText>
         </HintBox>
       )}
     </Container>

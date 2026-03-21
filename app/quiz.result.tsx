@@ -18,7 +18,17 @@ import { RewardsSummaryCard } from '@nexo/components/Quiz/Result/RewardsSummaryC
 import { ResultActions } from '@nexo/components/Quiz/Result/ResultActions';
 
 export default function QuizResultScreen() {
-  const { quizId, correct, total, passed, timeExpired, quitEarly, timeSpent } = useLocalSearchParams();
+  const {
+    quizId,
+    correct,
+    total,
+    passed,
+    timeExpired,
+    quitEarly,
+    timeSpent,
+    coinsBoostMultiplier,
+    expBoostMultiplier,
+  } = useLocalSearchParams();
   const router = useRouter();
   const { userProfile, refreshUserProfile } = useAuth();
   const userId = userProfile?.uid ?? userProfile?.id;
@@ -35,6 +45,8 @@ export default function QuizResultScreen() {
   const totalCount = parseInt(total as string) || 1;
   const isPassed = passed === 'true';
   const resolvedTimeSpent = parseInt(timeSpent as string) || 0;
+  const resolvedCoinsBoost = Math.max(parseInt(coinsBoostMultiplier as string) || 1, 1);
+  const resolvedExpBoost = Math.max(parseInt(expBoostMultiplier as string) || 1, 1);
   const percentage = Math.round((correctCount / totalCount) * 100);
   const resolvedAttempt = attempt ?? 1;
 
@@ -43,8 +55,10 @@ export default function QuizResultScreen() {
   const canRetake = !isQuizCompleted(resolvedAttempt);
   const baseCoins = Number(quiz?.coinReward ?? quiz?.reward ?? 0);
   const baseExp = Number(quiz?.expReward ?? quiz?.exp ?? 0);
-  const earnedCoins = Math.floor(baseCoins * rewardMultiplier);
-  const earnedExp = Math.floor(baseExp * rewardMultiplier);
+  const boostedCoinsBase = baseCoins * resolvedCoinsBoost;
+  const boostedExpBase = baseExp * resolvedExpBoost;
+  const earnedCoins = Math.floor(boostedCoinsBase * rewardMultiplier);
+  const earnedExp = Math.floor(boostedExpBase * rewardMultiplier);
 
   useEffect(() => {
     if (!quizId) return;
@@ -71,8 +85,8 @@ export default function QuizResultScreen() {
       const effectiveRewardMultiplier = getQuizRewardMultiplier(effectiveAttempt);
       const baseCoins = Number(quiz.coinReward ?? quiz.reward ?? 0);
       const baseExp = Number(quiz.expReward ?? quiz.exp ?? 0);
-      const finalCoins = Math.floor(baseCoins * effectiveRewardMultiplier);
-      const finalExp = Math.floor(baseExp * effectiveRewardMultiplier);
+      const finalCoins = Math.floor(baseCoins * resolvedCoinsBoost * effectiveRewardMultiplier);
+      const finalExp = Math.floor(baseExp * resolvedExpBoost * effectiveRewardMultiplier);
 
       const progressResult = await saveQuizAttempt({
         userId,
@@ -108,6 +122,8 @@ export default function QuizResultScreen() {
     isTimeExpired,
     quiz,
     resolvedTimeSpent,
+    resolvedCoinsBoost,
+    resolvedExpBoost,
     totalCount,
     refreshUserProfile,
     userId,
@@ -201,8 +217,8 @@ export default function QuizResultScreen() {
             <RewardsSummaryCard
               coins={earnedCoins}
               exp={earnedExp}
-              originalCoins={baseCoins}
-              originalExp={baseExp}
+              originalCoins={boostedCoinsBase}
+              originalExp={boostedExpBase}
               isReducedReward={isReducedReward}
             />
           )}
