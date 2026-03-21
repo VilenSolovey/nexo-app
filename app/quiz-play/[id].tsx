@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Text,
   KeyboardAvoidingView,
@@ -7,10 +7,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SHOP_ITEMS } from '@nexo/constants/shop';
 import { Theme } from '@nexo/constants/theme';
 
 import { useAuth } from '@nexo/contexts/AuthProvider';
-import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, arrayRemove, increment } from 'firebase/firestore';
 import { db } from '@nexo/services/firebase';
 import { getQuizById } from '@nexo/services/quiz.service';
 import { getQuizProgress } from '@nexo/services/progress.service';
@@ -35,11 +36,20 @@ export default function QuizPlayScreen() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [selectedOption, setSelectedOption] = useState<string | boolean | string[] | null>(null);
   const [fillBlankAnswer, setFillBlankAnswer] = useState('');
-  const [usedPowerUps, setUsedPowerUps] = useState<string[]>([]);
+  const [usedQuestionPowerUps, setUsedQuestionPowerUps] = useState<string[]>([]);
+  const [usedQuizPowerUps, setUsedQuizPowerUps] = useState<string[]>([]);
   const [removedOptions, setRemovedOptions] = useState<string[]>([]);
   const [showHint, setShowHint] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-  const userInventory = userProfile?.inventory || [];
+  const userInventory = useMemo(() => userProfile?.inventory ?? [], [userProfile?.inventory]);
+  const userConsumables = useMemo(
+    () => userProfile?.consumables ?? {},
+    [userProfile?.consumables],
+  );
+  const [coinsBoostMultiplier, setCoinsBoostMultiplier] = useState(1);
+  const [expBoostMultiplier, setExpBoostMultiplier] = useState(1);
+  const [luckyCharmActive, setLuckyCharmActive] = useState(false);
+
  
   const [quiz, setQuiz] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
@@ -51,6 +61,41 @@ export default function QuizPlayScreen() {
   const normalizedQuestionType = String(currentQuestion?.type || '')
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, '_');
+  const currentHint = currentQuestion?.hint ?? currentQuestion?.explanation ?? undefined
+  const availablePowerUps = React.useMemo(
+    () =>
+      SHOP_ITEMS.filter((item) => item.type !== 'cosmetic')
+        .map((item) => {
+          const count = Number(userConsumables[item.id] ?? 0) + (userInventory.includes(item.id) ? 1 : 0)
+
+          return {
+            id: item.id,
+            name: item.name,
+            icon: item.icon,
+            count,
+          }
+        })
+        .filter((item) => item.count > 0),
+    [userConsumables, userInventory],
+  );
+  const unavailablePowerUps = useMemo(() => {
+    const disabled: string[] = []
+
+    if (!currentHint) {
+      disabled.push('hint_reveal')
+    }
+
+    const supportsFiftyFifty =
+      (normalizedQuestionType === 'multiple_choice' || normalizedQuestionType === 'single_answer') &&
+      Array.isArray(currentQuestion?.options) &&
+      currentQuestion.options.length > 2
+
+    if (!supportsFiftyFifty) {
+      disabled.push('fifty_fifty')
+    }
+
+    return disabled
+  }, [currentHint, currentQuestion?.options, normalizedQuestionType])
 
   const getCorrectAnswerValue = (question: any) => {
     if (question?.correctAnswer !== undefined) {
@@ -165,28 +210,72 @@ export default function QuizPlayScreen() {
   }, [answers, currentQuestion]);
 
   const usePowerUp = async (powerUpId: string) => {
-    
-    if (!userProfile?.uid) return;
+    if (!userId) return;
+
+    const currentCount = Number(userConsumables[powerUpId] ?? 0)
+    const hasLegacyConsumable = userInventory.includes(powerUpId)
+
+    if (currentCount <= 0 && !hasLegacyConsumable) {
+      Alert.alert('Предмет недоступний', 'Спочатку купіть цей предмет у магазині.')
+      return
+    }
+
+    if (unavailablePowerUps.includes(powerUpId)) {
+      if (powerUpId === 'fifty_fifty') {
+        Alert.alert('Недоступно', '50/50 працює тільки на питаннях з варіантами відповіді.')
+      } else if (powerUpId === 'hint_reveal') {
+        Alert.alert('Недоступно', 'Для цього питання окремої підказки немає.')
+      }
+      return
+    }
+
+    const isQuizScopedPowerUp = ['double_coins', 'double_exp', 'lucky_charm'].includes(powerUpId)
+    const alreadyUsed = isQuizScopedPowerUp
+      ? usedQuizPowerUps.includes(powerUpId)
+      : usedQuestionPowerUps.includes(powerUpId)
+
+    if (alreadyUsed) {
+      Alert.alert('Вже використано', 'Цей предмет уже активований у поточному квізі.')
+      return
+    }
 
     try {
       switch (powerUpId) {
         case 'hint_reveal':
-          setShowHint(true);
+          if (currentHint) {
+            if (normalizedQuestionType === 'fill_blank') {
+              setShowHint(true);
+            } else {
+              Alert.alert(
+                luckyCharmActive ? 'Посилена підказка' : 'Підказка',
+                currentHint,
+              );
+            }
+          } else {
+            Alert.alert('Підказка', 'Для цього питання окремої підказки поки немає.')
+          }
           break;
           
         case 'fifty_fifty':
-          if (normalizedQuestionType === 'multiple_choice' && currentQuestion.options) {
+          if (
+            (normalizedQuestionType === 'multiple_choice' || normalizedQuestionType === 'single_answer') &&
+            currentQuestion.options
+          ) {
             const correctAnswer = getCorrectAnswerValue(currentQuestion);
             const correctAnswers = Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer];
             const incorrectOptions = currentQuestion.options.filter((opt: string) => !correctAnswers.includes(opt));
-            const toRemove = incorrectOptions.slice(0, 2);
+            const removeCount = luckyCharmActive ? 3 : 2;
+            const toRemove = incorrectOptions.slice(0, removeCount);
             setRemovedOptions(toRemove);
           }
           break;
           
         case 'skip_question':
-          
           handleNext(true);
+          break;
+
+        case 'time_freeze':
+          setTimeLeft((prev) => prev + 30);
           break;
           
         case 'answer_reveal':
@@ -201,16 +290,43 @@ export default function QuizPlayScreen() {
             );
           }
           break;
+
+        case 'double_coins':
+          setCoinsBoostMultiplier(2);
+          Alert.alert('Бустер активовано', 'Монети за цей квіз будуть подвоєні.')
+          break;
+
+        case 'double_exp':
+          setExpBoostMultiplier(2);
+          Alert.alert('Бустер активовано', 'EXP за цей квіз буде подвоєний.')
+          break;
+
+        case 'lucky_charm':
+          setLuckyCharmActive(true);
+          Alert.alert('Талісман активовано', 'Підказки і 50/50 стануть сильнішими в цьому квізі.')
+          break;
+
       }
 
 
-      const userRef = doc(db, 'users', userProfile.uid);
-      await updateDoc(userRef, {
-        inventory: arrayRemove(powerUpId),
-      });
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(
+        userRef,
+        currentCount > 0
+          ? {
+              [`consumables.${powerUpId}`]: increment(-1),
+            }
+          : {
+              inventory: arrayRemove(powerUpId),
+            },
+      );
       
       await refreshUserProfile();
-      setUsedPowerUps([...usedPowerUps, powerUpId]);
+      if (isQuizScopedPowerUp) {
+        setUsedQuizPowerUps((prev) => [...prev, powerUpId]);
+      } else {
+        setUsedQuestionPowerUps((prev) => [...prev, powerUpId]);
+      }
       
     } catch (error) {
       console.error('PowerUp error:', error);
@@ -267,6 +383,7 @@ export default function QuizPlayScreen() {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setShowHint(false);
       setRemovedOptions([]);
+      setUsedQuestionPowerUps([]);
     }
   };
   
@@ -276,6 +393,7 @@ export default function QuizPlayScreen() {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
       setShowHint(false);
       setRemovedOptions([]);
+      setUsedQuestionPowerUps([]);
     }
   };
 
@@ -344,6 +462,8 @@ export default function QuizPlayScreen() {
         timeExpired: timeExpired ? 'true' : 'false',
         quitEarly: quitEarly ? 'true' : 'false',
         timeSpent: String(timeSpent),
+        coinsBoostMultiplier: String(coinsBoostMultiplier),
+        expBoostMultiplier: String(expBoostMultiplier),
       },
     });
   };
@@ -416,7 +536,7 @@ export default function QuizPlayScreen() {
             onChange={setFillBlankAnswer}
             type={currentQuestion.type}
             showHint={showHint}
-            explanation={currentQuestion.explanation}
+            hint={currentHint}
           />
         );
 
@@ -465,6 +585,13 @@ export default function QuizPlayScreen() {
           total={quiz.questions.length}
           onQuit={handleQuit}
           timeLeft={timeLeft}
+        />
+
+        <PowerUpsPanel
+          availablePowerUps={availablePowerUps}
+          usedPowerUps={[...usedQuestionPowerUps, ...usedQuizPowerUps]}
+          unavailablePowerUps={unavailablePowerUps}
+          onUsePowerUp={usePowerUp}
         />
 
         <KeyboardAvoidingView

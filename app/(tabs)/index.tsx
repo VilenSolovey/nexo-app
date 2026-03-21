@@ -7,6 +7,7 @@ import { Banner } from "@nexo/components/Home/Banner/Banner"
 import { LevelProgressCard } from "@nexo/components/Home/LevelProgressCard/LevelProgressCard"
 import { UserHeader } from "@nexo/components/Home/UserHeader/UserHeader"
 import { StreakCard } from "@nexo/components/Home/StreakCard/StreakCard"
+import { MiniGameOfDay } from "@nexo/components/Home/MiniGameOfDay/MiniGameOfDay"
 import { NewsSection } from "@nexo/components/Home/NewSection/NewsSection"
 import { RecentSection } from "@nexo/components/Home/RecentSection/RecentSection"
 import { RefreshableScreen } from "@nexo/components/RefreshableScreen"
@@ -146,6 +147,7 @@ export default function HomeScreen() {
       <Banner />
 
       <StreakCard streakDays={streakDays} />
+      {/* <MiniGameOfDay /> */}
 
       <NewsSection
         items={news}

@@ -20,6 +20,7 @@ export type QuizQuestionBase = {
   id: string
   type: 'single_answer' | 'multiple_choice' | 'true_false' | 'fill_blank'
   question: string
+  hint?: string
   explanation?: string
 }
 
@@ -58,4 +59,3 @@ export type RecentItem = Quiz & {
   score: number
   total: number
 }
-

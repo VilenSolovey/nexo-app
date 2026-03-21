@@ -75,8 +75,8 @@ function buildAchievements(
 
     const tiers: AchievementTierViewModel[] = achievement.tiers.map((tier, index) => {
       const storedTier = record?.tiers?.[tier.id]
-      const unlocked =
-        Boolean(storedTier?.unlockedAt) || highestUnlockedFromRecord >= index || current >= tier.target
+      const persistedUnlocked = Boolean(storedTier?.unlockedAt) || highestUnlockedFromRecord >= index
+      const unlocked = persistedUnlocked || current >= tier.target
       const claimed = Boolean(storedTier?.claimedAt) || highestClaimedFromRecord >= index
 
       return {
@@ -97,7 +97,12 @@ function buildAchievements(
     const highestUnlockedTier = Math.max(record?.highestUnlockedTier ?? -1, ...unlockedIndices, -1)
     const highestClaimedTier = Math.max(record?.highestClaimedTier ?? -1, ...claimedIndices, -1)
     const nextTier = tiers.find((tier) => !tier.unlocked) ?? null
-    const claimableTier = tiers.find((tier) => tier.unlocked && !tier.claimed) ?? null
+    const claimableTier =
+      tiers.find((tier) => {
+        const storedTier = record?.tiers?.[tier.id]
+        const persistedUnlocked = Boolean(storedTier?.unlockedAt) || highestUnlockedFromRecord >= tier.index
+        return persistedUnlocked && !tier.claimed
+      }) ?? null
     const previousTarget = highestUnlockedTier >= 0 ? achievement.tiers[highestUnlockedTier].target : 0
     const nextTarget = nextTier?.target ?? previousTarget
     const span = Math.max(nextTarget - previousTarget, 1)
@@ -161,9 +166,14 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
   const [progressList, setProgressList] = useState<UserQuizProgress[]>([])
   const [userAchievements, setUserAchievements] = useState<UserAchievementRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [hasFetchedOnce, setHasFetchedOnce] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [claimingKey, setClaimingKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setHasFetchedOnce(false)
+  }, [userId])
 
   const refetch = useCallback(async () => {
     if (!userId) {
@@ -171,6 +181,7 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
       setProgressList([])
       setUserAchievements([])
       setLoading(false)
+      setHasFetchedOnce(true)
       return
     }
 
@@ -191,6 +202,7 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
       setError(e?.message ?? 'Не вдалося завантажити ачівки')
     } finally {
       setLoading(false)
+      setHasFetchedOnce(true)
     }
   }, [userId])
 
@@ -359,6 +371,7 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
     almostThere,
     summary,
     loading,
+    initialLoading: loading && !hasFetchedOnce,
     syncing,
     claimingKey,
     error,

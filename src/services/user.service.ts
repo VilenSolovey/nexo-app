@@ -53,6 +53,12 @@ export async function getCurrentUser(userId: string): Promise<UserProfile | null
     displayName: String((raw as any).displayName ?? (raw as any).name ?? "User"),
     email: String((raw as any).email ?? ""),
     coins: Number((raw as any).coins ?? 0),
+    consumables:
+      typeof (raw as any).consumables === "object" && (raw as any).consumables !== null
+        ? Object.fromEntries(
+            Object.entries((raw as any).consumables).map(([key, value]) => [key, Number(value ?? 0)]),
+          )
+        : {},
     streakDays: Number((raw as any).streakDays ?? 0),
     level: normalizedLevel,
     exp,
@@ -89,6 +95,12 @@ export function listenUser(userId: string, cb: (u: UserProfile | null) => void) 
       displayName: String((raw as any).displayName ?? (raw as any).name ?? "User"),
       email: String((raw as any).email ?? ""),
       coins: Number((raw as any).coins ?? 0),
+      consumables:
+        typeof (raw as any).consumables === "object" && (raw as any).consumables !== null
+          ? Object.fromEntries(
+              Object.entries((raw as any).consumables).map(([key, value]) => [key, Number(value ?? 0)]),
+            )
+          : {},
       streakDays: Number((raw as any).streakDays ?? 0),
       level: normalizedLevel,
       exp,
@@ -222,6 +234,7 @@ export async function createUserIfMissing(uid: string, seed?: Partial<UserProfil
       completedQuizzes: [],
       achievements: seed?.achievements ?? [],
       inventory: seed?.inventory ?? [],
+      consumables: seed?.consumables ?? {},
       selectedThemeId: seed?.selectedThemeId ?? null,
       selectedAvatarId: seed?.selectedAvatarId ?? null,
       createdAt: serverTimestamp(),

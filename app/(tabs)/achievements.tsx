@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Alert } from 'react-native'
+import { ActivityIndicator, Alert } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { ACHIEVEMENT_CATEGORY_ORDER } from '@nexo/constants/achievements'
 import { Theme } from '@nexo/constants/theme'
@@ -38,6 +38,7 @@ export default function AchievementsScreen() {
     almostThere,
     summary,
     loading,
+    initialLoading,
     syncing,
     claimingKey,
     error,
@@ -79,15 +80,24 @@ export default function AchievementsScreen() {
       <Screen>
         <AchievementsHeader />
 
-        <AchievementsHero summary={summary} />
+        {initialLoading ? (
+          <FeedbackCard>
+            <ActivityIndicator size="small" color={Theme.primary} />
+            <FeedbackText>Завантажуємо досягнення...</FeedbackText>
+          </FeedbackCard>
+        ) : null}
 
-        <AlmostThereSection items={almostThere} />
+        {!initialLoading ? <AchievementsHero summary={summary} /> : null}
 
-        <AchievementFilters
-          activeFilter={activeFilter}
-          syncing={syncing}
-          onChange={setActiveFilter}
-        />
+        {!initialLoading ? <AlmostThereSection items={almostThere} /> : null}
+
+        {!initialLoading ? (
+          <AchievementFilters
+            activeFilter={activeFilter}
+            syncing={syncing}
+            onChange={setActiveFilter}
+          />
+        ) : null}
 
         {error ? (
           <FeedbackCard>
@@ -96,14 +106,14 @@ export default function AchievementsScreen() {
           </FeedbackCard>
         ) : null}
 
-        {!loading && filteredGroups.length === 0 ? (
+        {!initialLoading && !loading && filteredGroups.length === 0 ? (
           <FeedbackCard>
             <Ionicons name="layers-outline" size={18} color={Theme.textSecondary} />
             <FeedbackText>Під цей фільтр поки нічого не підпадає.</FeedbackText>
           </FeedbackCard>
         ) : null}
 
-        {filteredGroups.map((group) => (
+        {!initialLoading && filteredGroups.map((group) => (
           <AchievementGroupSection
             key={group.category}
             category={group.category}

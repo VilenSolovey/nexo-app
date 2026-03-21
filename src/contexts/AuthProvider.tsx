@@ -35,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
       displayName,
       coins: 0,
+      consumables: {},
       exp: 0,
       level: 1,
       streak: 0,
@@ -81,6 +82,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: uid,
         uid,
         email: resolvedEmail,
+        consumables:
+          typeof data.consumables === 'object' && data.consumables !== null
+            ? Object.fromEntries(
+                Object.entries(data.consumables).map(([key, value]) => [key, Number(value ?? 0)]),
+              )
+            : {},
         exp,
         level: normalizedLevel,
       };
