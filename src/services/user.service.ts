@@ -53,6 +53,9 @@ export async function getCurrentUser(userId: string): Promise<UserProfile | null
     displayName: String((raw as any).displayName ?? (raw as any).name ?? "User"),
     email: String((raw as any).email ?? ""),
     coins: Number((raw as any).coins ?? 0),
+    expoPushTokens: Array.isArray((raw as any).expoPushTokens)
+      ? (raw as any).expoPushTokens.map(String)
+      : [],
     consumables:
       typeof (raw as any).consumables === "object" && (raw as any).consumables !== null
         ? Object.fromEntries(
@@ -95,6 +98,9 @@ export function listenUser(userId: string, cb: (u: UserProfile | null) => void) 
       displayName: String((raw as any).displayName ?? (raw as any).name ?? "User"),
       email: String((raw as any).email ?? ""),
       coins: Number((raw as any).coins ?? 0),
+      expoPushTokens: Array.isArray((raw as any).expoPushTokens)
+        ? (raw as any).expoPushTokens.map(String)
+        : [],
       consumables:
         typeof (raw as any).consumables === "object" && (raw as any).consumables !== null
           ? Object.fromEntries(
@@ -129,6 +135,13 @@ export function listenUser(userId: string, cb: (u: UserProfile | null) => void) 
 export async function updateUser(userId: string, data: Partial<Omit<UserProfile, "id" | "completedQuizzes">>) {
   const ref = doc(db, "users", userId)
   await updateDoc(ref, data)
+}
+
+export async function saveExpoPushToken(userId: string, expoPushToken: string) {
+  const ref = doc(db, "users", userId)
+  await updateDoc(ref, {
+    expoPushTokens: arrayUnion(expoPushToken),
+  })
 }
 
 export async function addCompletedQuiz(uid: string, item: CompletedQuiz, rewardEarned: number = 0) {
@@ -226,6 +239,7 @@ export async function createUserIfMissing(uid: string, seed?: Partial<UserProfil
       displayName: seed?.displayName ?? 'Player',
       email: seed?.email ?? '',
       coins: seed?.coins ?? 0,
+      expoPushTokens: seed?.expoPushTokens ?? [],
       exp: seed?.exp ?? 0,
       level: seed?.level ?? 1,
       streak: seed?.streak ?? 0,

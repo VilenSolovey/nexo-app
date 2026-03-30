@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@nexo/services/firebase'
 import type { UserQuizProgress } from '@nexo/types/result.types'
-import { isQuizCompleted } from '@nexo/utils/quiz-progress'
+import { hasPassedQuiz, isQuizCompleted } from '@nexo/utils/quiz-progress'
 
 function progressDocId(userId: string, quizId: string): string {
   return `${userId}_${quizId}`
@@ -71,7 +71,7 @@ export async function saveQuizAttempt(
     firstTimeReward = passed
     const newPassedCount = passed ? 1 : 0
     const newAttempts = 1
-    mastered = isQuizCompleted(newAttempts)
+    mastered = isQuizCompleted(newAttempts, passed)
 
     const newProgress: Omit<UserQuizProgress, 'lastPlayedAt'> & { lastPlayedAt: any } = {
       userId,
@@ -98,7 +98,8 @@ export async function saveQuizAttempt(
     const newAttempts = prev.attempts + 1
     const newPassedCount = prev.passedCount + (passed ? 1 : 0)
     const newBestScore = Math.max(prev.bestScore, percentageScore)
-    mastered = isQuizCompleted(newAttempts)
+    const hasEverPassed = passed || hasPassedQuiz(prev)
+    mastered = isQuizCompleted(newAttempts, hasEverPassed)
 
     firstTimeReward = false
 

@@ -106,7 +106,9 @@ export const ResultTitle = styled.Text`
   text-align: center;
 `
 
-export const ResultMessage = styled.Text`
+export const ResultMessage = styled.Text.attrs({
+  minimumFontScale: 0.9,
+})`
   font-size: 16px;
   color: ${({ theme }) => theme.textSecondary};
   text-align: center;
@@ -126,27 +128,42 @@ export const ScoreCard = styled.View`
 `
 
 export const ScoreCircle = styled.View`
-  width: 140px;
-  height: 140px;
-  border-radius: 70px;
+  width: 148px;
+  height: 148px;
+  border-radius: 74px;
   background-color: rgba(111, 219, 202, 0.2);
   justify-content: center;
   align-items: center;
   margin-bottom: 24px;
+  padding-horizontal: 12px;
   border-width: 4px;
   border-color: ${({ theme }) => theme.primary};
 `
 
-export const ScorePercentage = styled.Text`
+export const ScorePercentage = styled.Text.attrs({
+  allowFontScaling: false,
+  adjustsFontSizeToFit: true,
+  minimumFontScale: 0.6,
+  numberOfLines: 1,
+})`
+  width: 100%;
   font-size: 48px;
   font-weight: bold;
   color: ${({ theme }) => theme.primary};
+  text-align: center;
 `
 
-export const ScoreLabel = styled.Text`
+export const ScoreLabel = styled.Text.attrs({
+  allowFontScaling: false,
+  adjustsFontSizeToFit: true,
+  minimumFontScale: 0.8,
+  numberOfLines: 1,
+})`
+  width: 90%;
   font-size: 14px;
   color: ${({ theme }) => theme.textSecondary};
   margin-top: 4px;
+  text-align: center;
 `
 
 export const ScoreDetails = styled.View`
@@ -163,6 +180,7 @@ export const ScoreDetailItem = styled.View`
 export const ScoreDetailText = styled.Text`
   font-size: 16px;
   color: ${({ theme }) => theme.text};
+  flex-shrink: 1;
 `
 
 export const RewardsCard = styled.View`

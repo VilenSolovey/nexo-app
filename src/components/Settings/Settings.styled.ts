@@ -300,9 +300,10 @@ export const CosmeticsHintText = styled.Text`
 `
 
 export const StatsGrid = styled.View`
+  width: 100%;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 12px;
+  justify-content: space-between;
 `
 
 export const StatsLoading = styled.View`
@@ -318,29 +319,45 @@ export const StatsLoadingText = styled.Text`
 `
 
 export const StatCard = styled.View`
-  width: 48%;
-  min-width: 150px;
+  width: 48.5%;
+  max-width: 48.5%;
+  min-width: 0;
   background-color: ${({ theme }) => theme.background};
   border-radius: 18px;
   padding: 14px;
   border-width: 1px;
   border-color: ${({ theme }) => theme.cardBorder};
+  margin-bottom: 12px;
 `
 
-export const StatValue = styled.Text`
+export const StatValue = styled.Text.attrs({
+  allowFontScaling: false,
+  adjustsFontSizeToFit: true,
+  minimumFontScale: 0.8,
+  numberOfLines: 1,
+})`
   color: ${({ theme }) => theme.text};
   font-size: 24px;
   font-weight: 900;
   margin-top: 10px;
 `
 
-export const StatLabel = styled.Text`
+export const StatLabel = styled.Text.attrs({
+  numberOfLines: 2,
+})`
   color: ${({ theme }) => theme.textSecondary};
   font-size: 13px;
+  line-height: 18px;
   margin-top: 6px;
+  flex-shrink: 1;
 `
 
-export const StatHelper = styled.Text`
+export const StatHelper = styled.Text.attrs({
+  allowFontScaling: false,
+  adjustsFontSizeToFit: true,
+  minimumFontScale: 0.85,
+  numberOfLines: 1,
+})`
   color: ${({ theme }) => theme.primary};
   font-size: 12px;
   margin-top: 4px;

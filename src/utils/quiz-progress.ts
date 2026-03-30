@@ -18,12 +18,32 @@ export function getQuizRewardMultiplier(attemptNumber: number): number {
   return 0
 }
 
-export function isQuizCompleted(attempts: number): boolean {
-  return attempts >= MAX_QUIZ_ATTEMPTS
+export function isQuizCompleted(attempts: number, passed = false): boolean {
+  return passed || attempts >= MAX_QUIZ_ATTEMPTS
+}
+
+export function hasPassedQuiz(progress: UserQuizProgress | null | undefined): boolean {
+  if (!progress) return false
+
+  return Boolean(
+    progress.officialPassed ||
+      (progress.passedCount ?? 0) > 0 ||
+      (progress.bestScore ?? 0) >= 100,
+  )
+}
+
+export function isQuizProgressCompleted(progress: UserQuizProgress | null | undefined): boolean {
+  if (!progress) return false
+
+  if (progress.completed) {
+    return true
+  }
+
+  return isQuizCompleted(progress.attempts ?? 0, hasPassedQuiz(progress))
 }
 
 export function canStartQuiz(progress: UserQuizProgress | null | undefined): boolean {
-  return !isQuizCompleted(progress?.attempts ?? 0)
+  return !isQuizProgressCompleted(progress)
 }
 
 export function toMillis(value: TimestampLike): number | null {
@@ -56,7 +76,7 @@ export function isQuizRecent(params: {
 }): boolean {
   const { progress, createdAt, now = Date.now() } = params
 
-  if (isQuizCompleted(progress?.attempts ?? 0)) {
+  if (isQuizProgressCompleted(progress)) {
     return true
   }
 

@@ -4,14 +4,19 @@
     "slug": "Nexo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon-nexo.png",
     "scheme": "nexo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nexo.app.prod",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.nexo.app.prod",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -27,6 +32,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-notifications",
       [
         "expo-splash-screen",
         {
@@ -43,6 +49,19 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "FIREBASE_API_KEY": "AIzaSyBxSZzBF1KxQR7oOie07rCSu6PhBMDqsVc",
+      "FIREBASE_AUTH_DOMAIN": "nexo-app-40233.firebaseapp.com",
+      "FIREBASE_PROJECT_ID": "nexo-app-40233",
+      "FIREBASE_STORAGE_BUCKET": "nexo-app-40233.firebasestorage.app",
+      "FIREBASE_MESSAGING_SENDER_ID": "1054192373939",
+      "FIREBASE_APP_ID": "1:1054192373939:web:757521e12f5fdba5eee0c6",
+      "FIREBASE_MEASUREMENT_ID": "",
+      "router": {},
+      "eas": {
+        "projectId": "11f39192-2269-4953-afc8-1d5dceb44778"
+      }
     }
   }
 }

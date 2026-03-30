@@ -15,7 +15,7 @@ import { doc, updateDoc, arrayRemove, increment } from 'firebase/firestore';
 import { db } from '@nexo/services/firebase';
 import { getQuizById } from '@nexo/services/quiz.service';
 import { getQuizProgress } from '@nexo/services/progress.service';
-import { isQuizCompleted, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
+import { isQuizProgressCompleted, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
 import { getQuizDurationSeconds } from '@nexo/utils/quiz-time';
 import { QuizHeader } from '@nexo/components/Quiz/Play/QuizHeader';
 import { PowerUpsPanel } from '@nexo/components/Quiz/Play/PowerUpsPanel';
@@ -176,11 +176,13 @@ export default function QuizPlayScreen() {
 
     getQuizProgress(userId, quiz.id)
       .then((progress) => {
-        if (!isQuizCompleted(progress?.attempts ?? 0)) return;
+        if (!isQuizProgressCompleted(progress)) return;
 
         Alert.alert(
           'Квіз вже завершено',
-          `Для цього квізу вже використано ${MAX_QUIZ_ATTEMPTS} спроби.`,
+          progress?.passedCount
+            ? 'Ви вже завершили цей квіз на 100%.'
+            : `Для цього квізу вже використано ${MAX_QUIZ_ATTEMPTS} спроби.`,
           [
             {
               text: 'OK',

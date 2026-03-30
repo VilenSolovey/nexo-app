@@ -49,10 +49,11 @@ export default function QuizResultScreen() {
   const resolvedExpBoost = Math.max(parseInt(expBoostMultiplier as string) || 1, 1);
   const percentage = Math.round((correctCount / totalCount) * 100);
   const resolvedAttempt = attempt ?? 1;
+  const quizCompleted = mastered || isQuizCompleted(resolvedAttempt, isPassed);
 
   const rewardMultiplier = getQuizRewardMultiplier(resolvedAttempt);
   const isReducedReward = resolvedAttempt > 1;
-  const canRetake = !isQuizCompleted(resolvedAttempt);
+  const canRetake = !quizCompleted;
   const baseCoins = Number(quiz?.coinReward ?? quiz?.reward ?? 0);
   const baseExp = Number(quiz?.expReward ?? quiz?.exp ?? 0);
   const boostedCoinsBase = baseCoins * resolvedCoinsBoost;
@@ -197,7 +198,11 @@ export default function QuizResultScreen() {
             <ResultBanner
               variant="mastered"
               icon="trophy"
-              text={`🎓 Квіз завершено! Використано ${MAX_QUIZ_ATTEMPTS} спроби.`}
+              text={
+                isPassed
+                  ? '🎓 Квіз завершено! Ви набрали 100% правильних відповідей.'
+                  : `🎓 Квіз завершено! Використано ${MAX_QUIZ_ATTEMPTS} спроби.`
+              }
             />
           )}
 

@@ -2,6 +2,7 @@ import styled from 'styled-components/native';
 
 export const DotsRow = styled.View`
   flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
   gap: 6px;
