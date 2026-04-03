@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { QuizType, Quiz } from '@nexo/types/quiz.types';
 import { useAllQuizzes } from '@nexo/hooks/useAllQuizzes';
@@ -20,11 +20,17 @@ export default function QuizzesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [selectedType, setSelectedType] = useState<QuizType | 'all'>('all');
-  const { quizzes, loading, error, refetch: refetchQuizzes } = useAllQuizzes()
-  const { progressMap, refetch: refetchProgress } = useUserQuizProgress(userId)
+  const { quizzes, loading: quizzesLoading, error: quizzesError, refetch: refetchQuizzes } = useAllQuizzes()
+  const {
+    progressMap,
+    loading: progressLoading,
+    error: progressError,
+    refetch: refetchProgress,
+  } = useUserQuizProgress(userId)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [isInitialDataReady, setIsInitialDataReady] = useState(false)
 
   const handleQuizPress = (quizId: string) => {
     const quiz = quizzes.find(q => q.id === quizId);
@@ -62,6 +68,15 @@ export default function QuizzesScreen() {
     return matchesType && matchesSearch && !isHidden;
   });
 
+  useEffect(() => {
+    if (!quizzesLoading && !progressLoading) {
+      setIsInitialDataReady(true)
+    }
+  }, [progressLoading, quizzesLoading])
+
+  const shouldShowInitialLoading = !isInitialDataReady && (quizzesLoading || progressLoading)
+  const resolvedError = quizzesError ?? progressError
+
   useFocusEffect(
     React.useCallback(() => {
       refetchQuizzes()
@@ -95,11 +110,11 @@ export default function QuizzesScreen() {
           />
         }
       >
-        {loading ? (
+        {shouldShowInitialLoading ? (
           <LoadingText>Завантажується...</LoadingText>
-        ) : error ? (
-          <LoadingText>Помилка: {error}</LoadingText>
-        ) : quizzes.length === 0 ? (
+        ) : resolvedError ? (
+          <LoadingText>Помилка: {resolvedError}</LoadingText>
+        ) : filteredQuizzes.length === 0 ? (
           <LoadingText>Немає доступних вікторин</LoadingText>
         ) : (
           filteredQuizzes.map((quiz) => (

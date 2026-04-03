@@ -29,6 +29,10 @@ export interface SaveQuizAttemptParams {
   timeSpent: number   
   passed: boolean      
   timeExpired: boolean
+  sessionId?: string
+  leftAppDuringQuiz?: boolean
+  backgroundCount?: number
+  backgroundDurationMs?: number
 }
 
 export interface SaveQuizAttemptResult {
@@ -44,16 +48,35 @@ export interface SaveQuizAttemptResult {
 export async function saveQuizAttempt(
   params: SaveQuizAttemptParams,
 ): Promise<SaveQuizAttemptResult> {
-  const { userId, quizId, score, total, earnedCoins, timeSpent, passed, timeExpired } = params
-  const percentageScore = Math.round((score / total) * 100)
-
-  await addDoc(collection(db, 'results'), {
+  const {
     userId,
     quizId,
     score,
     total,
     earnedCoins,
+    earnedExp,
     timeSpent,
+    passed,
+    timeExpired,
+    sessionId,
+    leftAppDuringQuiz = false,
+    backgroundCount = 0,
+    backgroundDurationMs = 0,
+  } = params
+  const percentageScore = Math.round((score / total) * 100)
+
+  await addDoc(collection(db, 'results'), {
+    userId,
+    quizId,
+    sessionId: sessionId ?? null,
+    score,
+    total,
+    earnedCoins,
+    earnedExp,
+    timeSpent,
+    leftAppDuringQuiz,
+    backgroundCount,
+    backgroundDurationMs,
     completedAt: serverTimestamp(),
     passed,
     timeExpired,

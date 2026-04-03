@@ -4,6 +4,7 @@ export type QuizResult = {
   id: string
   userId: string
   quizId: string
+  sessionId?: string | null
   completedAt: Timestamp
   score: number
   total: number
@@ -12,6 +13,9 @@ export type QuizResult = {
   passed?: boolean
   timeExpired?: boolean
   earnedExp?: number
+  leftAppDuringQuiz?: boolean
+  backgroundCount?: number
+  backgroundDurationMs?: number
 }
 
 export type UserQuizProgress = {
