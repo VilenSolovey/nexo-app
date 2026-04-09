@@ -21,7 +21,7 @@ export function ResultActions({ canRetake, retryLabel, onRetry, onHome }: Props)
     <ActionsContainer>
       {canRetake && (
         <RetryButton onPress={onRetry}>
-          <Ionicons name="refresh" size={20} color={Theme.primary} />
+          <Ionicons name="refresh" size={20} color="#0F2F2A" />
           <RetryButtonText>{retryLabel}</RetryButtonText>
         </RetryButton>
       )}
