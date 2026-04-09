@@ -227,7 +227,7 @@ export const RetryButton = styled.TouchableOpacity`
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  background-color: ${({ theme }) => theme.warning};
+  background-color: #6fc9bb;
   border-radius: 12px;
   padding-vertical: 16px;
   column-gap: 8px;
@@ -236,7 +236,7 @@ export const RetryButton = styled.TouchableOpacity`
 export const RetryButtonText = styled.Text`
   font-size: 16px;
   font-weight: bold;
-  color: ${({ theme }) => theme.primary};
+  color: #0f2f2a;
 `
 
 export const HomeButton = styled.TouchableOpacity`

@@ -125,48 +125,32 @@ export default function HomeScreen() {
   )
 
   return (
-    <RefreshableScreen
-      onRefresh={pullToRefresh}
-      refreshing={isRefreshing}
-      contentContainerStyle={{ paddingBottom: 180 }}
-    >
-      <UserContainer>
-        <UserHeader
-          name={userProfile?.displayName ?? "Guest"}
-          coins={userProfile?.coins ?? 0}
+    <>
+      <RefreshableScreen
+        onRefresh={pullToRefresh}
+        refreshing={isRefreshing}
+        contentContainerStyle={{ paddingBottom: 220 }}
+      >
+        <UserContainer>
+          <UserHeader
+            name={userProfile?.displayName ?? "Guest"}
+            coins={userProfile?.coins ?? 0}
+            level={userProfile?.level ?? 1}
+            avatarSeed={avatarSeed}
+          />
+        </UserContainer>
+
+        <LevelProgressCard
           level={userProfile?.level ?? 1}
-          avatarSeed={avatarSeed}
+          exp={userProfile?.exp ?? 0}
         />
-      </UserContainer>
 
-      <LevelProgressCard
-        level={userProfile?.level ?? 1}
-        exp={userProfile?.exp ?? 0}
-      />
+        <Banner />
 
-      <Banner />
+        <StreakCard streakDays={streakDays} />
 
-      <StreakCard streakDays={streakDays} />
-      {/* <MiniGameOfDay /> */}
-
-      <NewsSection
-        items={news}
-        onSeeAll={() => {
-          Haptics.selectionAsync()
-          router.push("/quiz")
-        }}
-        onPressItem={() => {
-          Haptics.selectionAsync()
-        }}
-      />
-
-      {loading ? (
-        <Paragraph>Завантажується…</Paragraph>
-      ) : error ? (
-        <Paragraph>Помилка: {error}</Paragraph>
-      ) : (
-        <RecentSection
-          items={recent}
+        <NewsSection
+          items={news}
           onSeeAll={() => {
             Haptics.selectionAsync()
             router.push("/quiz")
@@ -175,7 +159,26 @@ export default function HomeScreen() {
             Haptics.selectionAsync()
           }}
         />
-      )}
-    </RefreshableScreen>
+
+        {loading ? (
+          <Paragraph>Завантажується…</Paragraph>
+        ) : error ? (
+          <Paragraph>Помилка: {error}</Paragraph>
+        ) : (
+          <RecentSection
+            items={recent}
+            onSeeAll={() => {
+              Haptics.selectionAsync()
+              router.push("/quiz")
+            }}
+            onPressItem={() => {
+              Haptics.selectionAsync()
+            }}
+          />
+        )}
+      </RefreshableScreen>
+
+      <MiniGameOfDay />
+    </>
   )
 }
