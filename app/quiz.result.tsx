@@ -4,6 +4,7 @@ import { Theme } from '@nexo/constants/theme';
 import { useAuth } from '@nexo/contexts/AuthProvider';
 import { getQuizById } from '@nexo/services/quiz.service';
 import { getQuizProgress, saveQuizAttempt } from '@nexo/services/progress.service';
+import { completeQuizSession } from '@nexo/services/quiz-session.service';
 import { applyUserRewards, registerDailyActivity } from '@nexo/services/user.service';
 import { getQuizRewardMultiplier, isQuizCompleted, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
 import {
@@ -26,6 +27,10 @@ export default function QuizResultScreen() {
     timeExpired,
     quitEarly,
     timeSpent,
+    sessionId,
+    leftAppDuringQuiz,
+    backgroundCount,
+    backgroundDurationMs,
     coinsBoostMultiplier,
     expBoostMultiplier,
   } = useLocalSearchParams();
@@ -41,10 +46,13 @@ export default function QuizResultScreen() {
 
   const isTimeExpired = timeExpired === 'true';
   const isQuitEarly = quitEarly === 'true';
+  const didLeaveAppDuringQuiz = leftAppDuringQuiz === 'true';
   const correctCount = parseInt(correct as string) || 0;
   const totalCount = parseInt(total as string) || 1;
   const isPassed = passed === 'true';
   const resolvedTimeSpent = parseInt(timeSpent as string) || 0;
+  const resolvedBackgroundCount = parseInt(backgroundCount as string) || 0;
+  const resolvedBackgroundDurationMs = parseInt(backgroundDurationMs as string) || 0;
   const resolvedCoinsBoost = Math.max(parseInt(coinsBoostMultiplier as string) || 1, 1);
   const resolvedExpBoost = Math.max(parseInt(expBoostMultiplier as string) || 1, 1);
   const percentage = Math.round((correctCount / totalCount) * 100);
@@ -88,6 +96,20 @@ export default function QuizResultScreen() {
       const finalCoins = Math.floor(baseCoins * resolvedCoinsBoost * effectiveRewardMultiplier);
       const finalExp = Math.floor(baseExp * resolvedExpBoost * effectiveRewardMultiplier);
 
+      if (typeof sessionId === 'string' && sessionId.trim()) {
+        await completeQuizSession({
+          sessionId,
+          score: correctCount,
+          total: totalCount,
+          timeSpent: resolvedTimeSpent,
+          passed: isPassed,
+          timeExpired: isTimeExpired,
+          quitEarly: isQuitEarly,
+          backgroundCount: resolvedBackgroundCount,
+          backgroundDurationMs: resolvedBackgroundDurationMs,
+        });
+      }
+
       const progressResult = await saveQuizAttempt({
         userId,
         quizId: quiz.id,
@@ -98,6 +120,10 @@ export default function QuizResultScreen() {
         timeSpent: resolvedTimeSpent,
         passed: isPassed,
         timeExpired: isTimeExpired,
+        sessionId: typeof sessionId === 'string' ? sessionId : undefined,
+        leftAppDuringQuiz: didLeaveAppDuringQuiz,
+        backgroundCount: resolvedBackgroundCount,
+        backgroundDurationMs: resolvedBackgroundDurationMs,
       });
 
       setMastered(progressResult.mastered);
@@ -119,11 +145,16 @@ export default function QuizResultScreen() {
     attempt,
     correctCount,
     isPassed,
+    isQuitEarly,
     isTimeExpired,
     quiz,
     resolvedTimeSpent,
+    resolvedBackgroundCount,
+    resolvedBackgroundDurationMs,
     resolvedCoinsBoost,
     resolvedExpBoost,
+    didLeaveAppDuringQuiz,
+    sessionId,
     totalCount,
     refreshUserProfile,
     userId,

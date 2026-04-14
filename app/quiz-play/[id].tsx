@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  AppState,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -15,7 +16,12 @@ import { doc, updateDoc, arrayRemove, increment } from 'firebase/firestore';
 import { db } from '@nexo/services/firebase';
 import { getQuizById } from '@nexo/services/quiz.service';
 import { getQuizProgress } from '@nexo/services/progress.service';
-import { isQuizCompleted, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
+import {
+  markQuizSessionBackground,
+  markQuizSessionForeground,
+  startQuizSession,
+} from '@nexo/services/quiz-session.service';
+import { isQuizProgressCompleted, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
 import { getQuizDurationSeconds } from '@nexo/utils/quiz-time';
 import { QuizHeader } from '@nexo/components/Quiz/Play/QuizHeader';
 import { PowerUpsPanel } from '@nexo/components/Quiz/Play/PowerUpsPanel';
@@ -49,6 +55,11 @@ export default function QuizPlayScreen() {
   const [coinsBoostMultiplier, setCoinsBoostMultiplier] = useState(1);
   const [expBoostMultiplier, setExpBoostMultiplier] = useState(1);
   const [luckyCharmActive, setLuckyCharmActive] = useState(false);
+  const sessionIdRef = React.useRef<string | null>(null);
+  const appStateRef = React.useRef(AppState.currentState);
+  const backgroundStartedAtRef = React.useRef<number | null>(null);
+  const backgroundCountRef = React.useRef(0);
+  const backgroundDurationMsRef = React.useRef(0);
 
  
   const [quiz, setQuiz] = useState<any | null>(null)
@@ -193,6 +204,55 @@ export default function QuizPlayScreen() {
         console.error('Failed to load quiz progress:', progressError);
       });
   }, [quiz?.id, userId, router]);
+
+  useEffect(() => {
+    if (!quiz?.id || !userId || sessionIdRef.current) return;
+
+    startQuizSession({ userId, quizId: quiz.id })
+      .then((sessionId) => {
+        sessionIdRef.current = sessionId;
+      })
+      .catch((sessionError) => {
+        console.error('Failed to start quiz session:', sessionError);
+      });
+  }, [quiz?.id, userId]);
+
+  useEffect(() => {
+    if (!quiz?.id) return;
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      const previousAppState = appStateRef.current;
+      appStateRef.current = nextAppState;
+
+      const leftForeground = previousAppState === 'active' && nextAppState !== 'active';
+      const returnedToForeground = previousAppState !== 'active' && nextAppState === 'active';
+
+      if (leftForeground && backgroundStartedAtRef.current === null) {
+        backgroundStartedAtRef.current = Date.now();
+        backgroundCountRef.current += 1;
+
+        if (sessionIdRef.current) {
+          markQuizSessionBackground(sessionIdRef.current, nextAppState).catch((sessionError) => {
+            console.error('Failed to mark quiz session as backgrounded:', sessionError);
+          });
+        }
+      }
+
+      if (returnedToForeground && backgroundStartedAtRef.current !== null) {
+        const backgroundDurationMs = Math.max(Date.now() - backgroundStartedAtRef.current, 0);
+        backgroundStartedAtRef.current = null;
+        backgroundDurationMsRef.current += backgroundDurationMs;
+
+        if (sessionIdRef.current) {
+          markQuizSessionForeground(sessionIdRef.current, backgroundDurationMs).catch((sessionError) => {
+            console.error('Failed to mark quiz session as active:', sessionError);
+          });
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, [quiz?.id]);
 
   useEffect(() => {
     if (!currentQuestion) return;
@@ -451,17 +511,25 @@ export default function QuizPlayScreen() {
     const percentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
     const passed = !forceFailed && percentage === 100;
     const timeSpent = Math.max(totalQuizTime - timeLeft, 0);
+    const backgroundDurationMs =
+      backgroundDurationMsRef.current +
+      (backgroundStartedAtRef.current ? Math.max(Date.now() - backgroundStartedAtRef.current, 0) : 0);
+    const backgroundCount = backgroundCountRef.current;
 
     router.replace({
       pathname: '/quiz.result',
       params: {
         quizId: quiz.id,
+        sessionId: sessionIdRef.current ?? '',
         correct: String(correctCount),
         total: String(totalQuestions),
         passed: passed ? 'true' : 'false',
         timeExpired: timeExpired ? 'true' : 'false',
         quitEarly: quitEarly ? 'true' : 'false',
         timeSpent: String(timeSpent),
+        leftAppDuringQuiz: backgroundCount > 0 ? 'true' : 'false',
+        backgroundCount: String(backgroundCount),
+        backgroundDurationMs: String(backgroundDurationMs),
         coinsBoostMultiplier: String(coinsBoostMultiplier),
         expBoostMultiplier: String(expBoostMultiplier),
       },
