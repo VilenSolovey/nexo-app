@@ -108,3 +108,7 @@ export async function getStoredMiniGameResult() {
 export async function saveMiniGameResult(result: DailyMiniGameResult) {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(result))
 }
+
+export async function clearStoredMiniGameResult() {
+  await AsyncStorage.removeItem(STORAGE_KEY)
+}
