@@ -21,7 +21,7 @@ import {
   markQuizSessionForeground,
   startQuizSession,
 } from '@nexo/services/quiz-session.service';
-import { isQuizProgressCompleted, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
+import { isQuizCompleted, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
 import { getQuizDurationSeconds } from '@nexo/utils/quiz-time';
 import { QuizHeader } from '@nexo/components/Quiz/Play/QuizHeader';
 import { PowerUpsPanel } from '@nexo/components/Quiz/Play/PowerUpsPanel';
