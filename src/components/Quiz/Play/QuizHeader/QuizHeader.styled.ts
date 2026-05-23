@@ -4,14 +4,14 @@ export const Header = styled.View`
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding-horizontal: 20px;
+  padding-horizontal: 16px;
   padding-top: 16px;
   padding-bottom: 12px;
-  column-gap: 12px;
+  column-gap: 10px;
 `;
 
 export const HeaderSide = styled.View`
-  width: 72px;
+  width: 86px;
   align-items: flex-start;
 `
 
@@ -33,14 +33,14 @@ export const ProgressContainer = styled.View`
 `;
 
 export const TimerWrap = styled.View`
-  width: 72px;
+  width: 86px;
   align-items: flex-end;
 `
 
 export const TimerBadge = styled.View`
-  min-width: 72px;
+  width: 86px;
   height: 44px;
-  padding-horizontal: 12px;
+  padding-horizontal: 10px;
   border-radius: 22px;
   background-color: rgba(255, 255, 255, 0.06);
   border-width: 1px;
@@ -53,7 +53,8 @@ export const TimerBadge = styled.View`
 
 export const TimerText = styled.Text`
   color: ${({ theme }) => theme.text};
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.2px;
+  letter-spacing: 0;
+  font-variant: tabular-nums;
 `

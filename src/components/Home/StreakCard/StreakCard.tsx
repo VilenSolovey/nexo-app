@@ -21,24 +21,80 @@ type Props = {
   streakDays?: number
 }
 
+const STREAK_MILESTONES = [7, 14, 30, 60, 100, 180, 365]
+const STREAK_TRACK_STEPS_COUNT = 7
+const EXTENDED_MILESTONE_STEP = 100
+
+const getDayWord = (days: number) => {
+  const absDays = Math.abs(days)
+  const lastDigit = absDays % 10
+  const lastTwoDigits = absDays % 100
+
+  if (lastDigit === 1 && lastTwoDigits !== 11) {
+    return "день"
+  }
+
+  if (
+    [2, 3, 4].includes(lastDigit)
+    && ![12, 13, 14].includes(lastTwoDigits)
+  ) {
+    return "дні"
+  }
+
+  return "днів"
+}
+
+const getNextMilestone = (streakDays: number) =>
+  STREAK_MILESTONES.find((milestone) => milestone > streakDays)
+  ?? Math.ceil((streakDays + 1) / EXTENDED_MILESTONE_STEP) * EXTENDED_MILESTONE_STEP
+
+const getSubtitle = (
+  streakDays: number,
+  remainingDays: number,
+  nextMilestone: number,
+) => {
+  if (streakDays === 0) {
+    return "Зайди сьогодні й відкрий перший день"
+  }
+
+  if (STREAK_MILESTONES.includes(streakDays)) {
+    return [
+      "Рубіж взято.",
+      `Наступний: ${nextMilestone} ${getDayWord(nextMilestone)}.`,
+    ].join(" ")
+  }
+
+  return [
+    `Ще ${remainingDays} ${getDayWord(remainingDays)}`,
+    `до рубежу ${nextMilestone} ${getDayWord(nextMilestone)}.`,
+  ].join(" ")
+}
+
 export const StreakCard: React.FC<Props> = ({ streakDays = 0 }) => {
-  const weeklyGoal = 7
-  const filledSteps = Math.min(streakDays, weeklyGoal)
-  const remainingDays = Math.max(weeklyGoal - streakDays, 0)
-  const progressSteps = Array.from({ length: weeklyGoal }, (_, index) => index < filledSteps)
-
+  const normalizedStreakDays = Math.max(streakDays, 0)
+  const nextMilestone = getNextMilestone(normalizedStreakDays)
+  const filledSteps = Math.min(
+    Math.floor((normalizedStreakDays / nextMilestone) * STREAK_TRACK_STEPS_COUNT),
+    STREAK_TRACK_STEPS_COUNT,
+  )
+  const remainingDays = Math.max(nextMilestone - normalizedStreakDays, 0)
+  const progressSteps = Array.from(
+    { length: STREAK_TRACK_STEPS_COUNT },
+    (_, index) => index < filledSteps,
+  )
   const title =
-    streakDays > 0 ? `${streakDays} дн. поспіль` : "Почни streak сьогодні"
+    normalizedStreakDays > 0
+      ? `${normalizedStreakDays} ${getDayWord(normalizedStreakDays)} поспіль`
+      : "Почни серію сьогодні"
 
-  const subtitle =
-    streakDays >= weeklyGoal
-      ? "Тримай темп і не дай серії обірватися"
-      : streakDays > 0
-        ? `Ще ${remainingDays} дн. до тижневого streak`
-        : "Зайди сьогодні й відкрий перший день"
-
-  const goalLabel =
-    streakDays >= weeklyGoal ? "7/7" : `${filledSteps}/7`
+  const subtitle = getSubtitle(
+    normalizedStreakDays,
+    remainingDays,
+    nextMilestone,
+  )
+  const goalLabel = `${normalizedStreakDays}/${nextMilestone}`
+  const activeStepIndex =
+    normalizedStreakDays < nextMilestone ? filledSteps : -1
 
   return (
     <StreakBanner>
@@ -60,15 +116,17 @@ export const StreakCard: React.FC<Props> = ({ streakDays = 0 }) => {
             <StreakStep
               key={index}
               $filled={isFilled}
-              $active={index === filledSteps && streakDays < weeklyGoal}
+              $active={index === activeStepIndex}
             />
           ))}
         </StreakTrack>
       </StreakCopy>
 
       <StreakRightPanel>
-        <StreakValue>{streakDays}</StreakValue>
-        <StreakValueLabel>дні</StreakValueLabel>
+        <StreakValue>{normalizedStreakDays}</StreakValue>
+        <StreakValueLabel>
+          {getDayWord(normalizedStreakDays)}
+        </StreakValueLabel>
         <StreakGoalPill>
           <StreakGoalText>{goalLabel}</StreakGoalText>
         </StreakGoalPill>

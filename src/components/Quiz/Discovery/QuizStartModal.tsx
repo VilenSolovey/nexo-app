@@ -6,7 +6,12 @@ import { Theme } from '@nexo/constants/theme';
 import { Quiz } from '@nexo/types/quiz.types';
 import { UserQuizProgress } from '@nexo/types/result.types';
 import { useAuth } from '@nexo/contexts/AuthProvider';
-import { canStartQuiz, getQuizRewardMultiplier, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
+import {
+  canStartQuiz,
+  getQuizMaxAttempts,
+  getQuizRewardMultiplier,
+  PERFECT_QUIZ_SCORE,
+} from '@nexo/utils/quiz-progress';
 import { formatQuizDurationShort, getQuizDurationSeconds } from '@nexo/utils/quiz-time';
 import {
   ModalOverlay,
@@ -46,8 +51,11 @@ export function QuizStartModal({ visible, quiz, progress, onClose }: QuizStartMo
   const estimatedTime = getQuizDurationSeconds(quiz);
   const currentCoins = userProfile?.coins || 0;
   const quizReward = quiz.reward ?? 0;
+  const maxAttempts = getQuizMaxAttempts(quiz.maxAttempts);
   const nextAttempt = (progress?.attempts ?? 0) + 1;
-  const isLocked = !canStartQuiz(progress);
+  const isLocked = !canStartQuiz(progress, maxAttempts);
+  const hasPerfectScore =
+    Math.max(progress?.bestScore ?? 0, progress?.officialScore ?? 0) >= PERFECT_QUIZ_SCORE;
   const rewardMultiplier = getQuizRewardMultiplier(nextAttempt);
   const adjustedReward = Math.floor(quizReward * rewardMultiplier);
   const potentialCoins = currentCoins + adjustedReward;
@@ -81,7 +89,11 @@ export function QuizStartModal({ visible, quiz, progress, onClose }: QuizStartMo
 
             <ModalInfo>
               <ModalInfoText>
-                {isLocked ? '✅ Квіз вже завершено' : `🎯 Спроба ${nextAttempt} з ${MAX_QUIZ_ATTEMPTS}`}
+                {isLocked
+                  ? hasPerfectScore
+                    ? 'Квіз пройдено на 100%'
+                    : 'Квіз вже завершено'
+                  : `🎯 Спроба ${nextAttempt} з ${maxAttempts}`}
               </ModalInfoText>
               <ModalInfoText>📝 {quiz.questions?.length || quiz.questionsCount} питань</ModalInfoText>
             </ModalInfo>
@@ -116,7 +128,7 @@ export function QuizStartModal({ visible, quiz, progress, onClose }: QuizStartMo
                 <ModalButtonSecondaryText>Ще не готовий</ModalButtonSecondaryText>
               </ModalButtonSecondary>
               <ModalButtonPrimary onPress={handleStartQuiz} disabled={isLocked} style={{ opacity: isLocked ? 0.5 : 1 }}>
-                <ModalButtonPrimaryText>{isLocked ? 'Ліміт спроб вичерпано' : 'Так, почнімо!'}</ModalButtonPrimaryText>
+                <ModalButtonPrimaryText>{isLocked ? 'Квіз завершено' : 'Так, почнімо!'}</ModalButtonPrimaryText>
               </ModalButtonPrimary>
             </ModalActions>
           </ModalGradient>

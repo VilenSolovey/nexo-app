@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Alert, Modal } from 'react-native'
+import { Modal } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import {
   BalanceCard,
@@ -44,14 +44,15 @@ import {
 import { SHOP_CATEGORIES, SHOP_ITEMS, type ShopItem } from '@nexo/constants/shop'
 import { useAppTheme } from '@nexo/contexts/AppThemeProvider'
 import { useAuth } from '@nexo/contexts/AuthProvider'
+import { useFeedback } from '@nexo/contexts/FeedbackProvider'
 import { db } from '@nexo/services/firebase'
 import { registerDailyActivity } from '@nexo/services/user.service'
 import { doc, runTransaction } from 'firebase/firestore'
 
 export default function ShopScreen() {
   const Theme = useAppTheme()
-  const { userProfile, refreshUserProfile } = useAuth()
-  const userId = userProfile?.uid ?? userProfile?.id
+  const { userId, userProfile, refreshUserProfile } = useAuth()
+  const { showModal, showToast } = useFeedback()
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null)
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
@@ -81,17 +82,27 @@ export default function ShopScreen() {
 
   const handlePurchase = (item: ShopItem) => {
     if (!userId) {
-      Alert.alert('Потрібен акаунт', 'Увійдіть в акаунт, щоб купувати предмети.')
+      showModal({
+        type: 'warning',
+        title: 'Потрібен акаунт',
+        message: 'Увійдіть в акаунт, щоб купувати предмети.',
+      })
       return
     }
 
     if (item.type === "cosmetic" && isOwnedCosmetic(item)) {
-      Alert.alert('Уже у власності', 'Цей предмет у вас уже відкритий.')
+      showToast({
+        type: 'info',
+        message: 'Цей предмет уже відкритий.',
+      })
       return
     }
 
     if (userCoins < item.price) {
-      Alert.alert('Недостатньо Nexons', 'Потрібно більше монет для цієї покупки.')
+      showToast({
+        type: 'warning',
+        message: 'Потрібно більше Nexons для цієї покупки.',
+      })
       return
     }
 
@@ -156,9 +167,16 @@ export default function ShopScreen() {
           ? 'Предмет доступний у профілі.'
           : `Додано ${selectedItem.uses ?? 1} використ.`
 
-      Alert.alert('Покупка успішна', `${selectedItem.name}\n${amountLabel}`)
+      showToast({
+        type: 'success',
+        message: `${selectedItem.name}: ${amountLabel}`,
+      })
     } catch (error: any) {
-      Alert.alert('Помилка покупки', error?.message ?? 'Не вдалося завершити покупку.')
+      showModal({
+        type: 'error',
+        title: 'Помилка покупки',
+        message: error?.message ?? 'Не вдалося завершити покупку.',
+      })
     } finally {
       setIsPurchasing(false)
     }

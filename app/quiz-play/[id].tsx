@@ -21,7 +21,11 @@ import {
   markQuizSessionForeground,
   startQuizSession,
 } from '@nexo/services/quiz-session.service';
-import { isQuizCompleted, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
+import {
+  getQuizMaxAttempts,
+  isQuizProgressCompleted,
+  PERFECT_QUIZ_SCORE,
+} from '@nexo/utils/quiz-progress';
 import { getQuizDurationSeconds } from '@nexo/utils/quiz-time';
 import { QuizHeader } from '@nexo/components/Quiz/Play/QuizHeader';
 import { PowerUpsPanel } from '@nexo/components/Quiz/Play/PowerUpsPanel';
@@ -35,8 +39,7 @@ import { SafeArea, ScrollContent } from '@nexo/components/Quiz/Play/QuizPlay.sty
 export default function QuizPlayScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { userProfile, refreshUserProfile } = useAuth();
-  const userId = userProfile?.uid ?? userProfile?.id;
+  const { userId, userProfile, refreshUserProfile } = useAuth();
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
@@ -174,24 +177,38 @@ export default function QuizPlayScreen() {
   answersRef.current = answers;
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !userId) return;
     setLoading(true);
-    getQuizById(String(id))
-      .then(setQuiz)
+    getQuizById(String(id), userId)
+      .then((loadedQuiz) => {
+        if (!loadedQuiz) {
+          setError('Квіз не знайдено')
+          return
+        }
+
+        setQuiz(loadedQuiz)
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, userId]);
 
   useEffect(() => {
     if (!quiz?.id || !userId) return;
 
     getQuizProgress(userId, quiz.id)
       .then((progress) => {
-        if (!isQuizCompleted(progress?.attempts ?? 0)) return;
+        const maxAttempts = getQuizMaxAttempts(quiz.maxAttempts);
+
+        if (!isQuizProgressCompleted(progress, maxAttempts)) return;
+
+        const hasPerfectScore =
+          Math.max(progress?.bestScore ?? 0, progress?.officialScore ?? 0) >= PERFECT_QUIZ_SCORE;
 
         Alert.alert(
           'Квіз вже завершено',
-          `Для цього квізу вже використано ${MAX_QUIZ_ATTEMPTS} спроби.`,
+          hasPerfectScore
+            ? 'Для цього квізу вже набрано 100%.'
+            : `Для цього квізу вже використано ${maxAttempts} спроби.`,
           [
             {
               text: 'OK',
@@ -203,7 +220,7 @@ export default function QuizPlayScreen() {
       .catch((progressError) => {
         console.error('Failed to load quiz progress:', progressError);
       });
-  }, [quiz?.id, userId, router]);
+  }, [quiz?.id, quiz?.maxAttempts, userId, router]);
 
   useEffect(() => {
     if (!quiz?.id || !userId || sessionIdRef.current) return;
@@ -532,6 +549,7 @@ export default function QuizPlayScreen() {
         backgroundDurationMs: String(backgroundDurationMs),
         coinsBoostMultiplier: String(coinsBoostMultiplier),
         expBoostMultiplier: String(expBoostMultiplier),
+        answers: JSON.stringify(finalAnswers),
       },
     });
   };
@@ -643,6 +661,18 @@ export default function QuizPlayScreen() {
         </LinearGradient>
       )
     }
+
+  if (error || !quiz) {
+    return (
+      <LinearGradient colors={[Theme.background, Theme.card]} style={{ flex: 1 }}>
+        <SafeArea>
+          <Text style={{ color: Theme.text }}>
+            {error ?? 'Квіз не знайдено.'}
+          </Text>
+        </SafeArea>
+      </LinearGradient>
+    )
+  }
 
   return (
     <LinearGradient colors={[Theme.background, Theme.card]} style={{ flex: 1 }}>

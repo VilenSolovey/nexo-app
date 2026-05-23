@@ -17,6 +17,9 @@ const TYPE_ICONS: Record<string, string> = {
   single_answer: 'text',
 };
 
+const COMPACT_QUESTION_LENGTH = 120;
+const DENSE_QUESTION_LENGTH = 190;
+
 interface QuestionCardProps {
   question: string;
   type: string;
@@ -26,6 +29,8 @@ export function QuestionCard({ question, type }: QuestionCardProps) {
   const normalized = String(type || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
   const iconName = TYPE_ICONS[normalized] ?? TYPE_ICONS[type] ?? 'text';
   const label = TYPE_LABELS[normalized] ?? TYPE_LABELS[type] ?? String(type);
+  const compact = question.length > COMPACT_QUESTION_LENGTH;
+  const dense = question.length > DENSE_QUESTION_LENGTH;
 
   return (
     <Card>
@@ -35,7 +40,7 @@ export function QuestionCard({ question, type }: QuestionCardProps) {
           <TypeChipText>{label}</TypeChipText>
         </TypeChip>
       </CardHeader>
-      <QuestionText>{question}</QuestionText>
+      <QuestionText $compact={compact} $dense={dense}>{question}</QuestionText>
     </Card>
   );
 }

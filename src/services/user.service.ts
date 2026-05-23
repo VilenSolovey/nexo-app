@@ -178,9 +178,28 @@ export async function applyUserRewards(
 export async function registerDailyActivity(uid: string): Promise<RegisterDailyActivityResult> {
   const todayKey = toLocalDateKey()
   const yesterdayKey = shiftDateKey(todayKey, -1)
+  const ref = doc(db, "users", uid)
+  const currentSnap = await getDoc(ref)
+
+  if (!currentSnap.exists()) {
+    throw new Error("User profile not found")
+  }
+
+  const currentData = currentSnap.data()
+  const currentLastActiveDate =
+    typeof currentData.lastActiveDate === "string" ? currentData.lastActiveDate : null
+
+  if (currentLastActiveDate === todayKey) {
+    const currentStreak = Number(currentData.streakDays ?? currentData.streak ?? 0)
+
+    return {
+      changed: false,
+      streakDays: currentStreak,
+      lastActiveDate: todayKey,
+    }
+  }
 
   return runTransaction(db, async (transaction) => {
-    const ref = doc(db, "users", uid)
     const snap = await transaction.get(ref)
 
     if (!snap.exists()) {

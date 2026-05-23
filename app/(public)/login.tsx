@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import { Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useAuth } from '@nexo/contexts/AuthProvider'
+import { useFeedback } from '@nexo/contexts/FeedbackProvider'
 import { Theme } from '@nexo/constants/theme'
 import { AuthButton } from '@nexo/components/Auth/AuthButton'
 import { AuthLayout } from '@nexo/components/Auth/AuthLayout'
@@ -22,11 +22,15 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false)
 
   const { signInEmail } = useAuth()
+  const { showModal, showToast } = useFeedback()
   const router = useRouter()
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Помилка', 'Будь ласка, заповніть всі поля')
+      showToast({
+        type: 'warning',
+        message: 'Будь ласка, заповніть всі поля.',
+      })
       return
     }
 
@@ -35,7 +39,11 @@ export default function LoginScreen() {
       await signInEmail(email, password)
       router.replace('/(tabs)')
     } catch (error: any) {
-      Alert.alert('Помилка', error.message || 'Не вдалося увійти')
+      showModal({
+        type: 'error',
+        title: 'Не вдалося увійти',
+        message: error.message || 'Перевірте пошту й пароль та спробуйте ще раз.',
+      })
     } finally {
       setLoading(false)
     }

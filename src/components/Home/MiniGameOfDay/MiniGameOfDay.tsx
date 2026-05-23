@@ -31,8 +31,7 @@ import {
 
 export function MiniGameOfDay() {
   const insets = useSafeAreaInsets()
-  const { userProfile, refreshUserProfile } = useAuth()
-  const userId = userProfile?.uid ?? userProfile?.id
+  const { userId, refreshUserProfile } = useAuth()
   const todayGame = getMiniGameOfDay()
   const todayKey = getMiniGameDateKey()
   const [visible, setVisible] = useState(false)
