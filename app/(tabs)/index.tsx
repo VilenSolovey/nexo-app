@@ -57,7 +57,7 @@ function joinRecentQuizzes(
 export default function HomeScreen() {
   const router = useRouter()
   const { userId, userProfile, loading: authLoading, refreshUserProfile } = useAuth()
-  const { quizzes, loading: quizzesLoading, error, refetch: refetchQuizzes } = useAllQuizzes()
+  const { quizzes, loading: quizzesLoading, error, refetch: refetchQuizzes } = useAllQuizzes(userId)
   const { progressList, progressMap, loading: progressLoading, refetch: refetchProgress } = useUserQuizProgress(userId)
   const [isRefreshing, setIsRefreshing] = useState(false)
   
