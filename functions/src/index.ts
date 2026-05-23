@@ -104,6 +104,10 @@ type HttpResponse = {
 
 const FRAGMENT_MASTERY_MIN_ANSWERS = 2;
 const FRAGMENT_MASTERY_MIN_ACCURACY_PERCENT = 75;
+const CHRONICLE_PRACTICE_REWARD_PER_QUESTION = 4;
+const CHRONICLE_PRACTICE_EXP_PER_QUESTION = 3;
+const CHRONICLE_TRIAL_REWARD_PER_QUESTION = 5;
+const CHRONICLE_TRIAL_EXP_PER_QUESTION = 3.5;
 
 async function requireRequestUserId(request: HttpRequest): Promise<string> {
   const authorization = Array.isArray(request.headers.authorization) ?
@@ -361,6 +365,25 @@ function pickWeightedQuestions(params: {
     .map((item) => item.question);
 }
 
+function getChronicleQuizEconomy(params: {
+  quizType: string;
+  questionCount: number;
+}) {
+  const safeQuestionCount = Math.max(1, params.questionCount);
+  const isTrial = params.quizType === "trial";
+  const rewardPerQuestion = isTrial ?
+    CHRONICLE_TRIAL_REWARD_PER_QUESTION :
+    CHRONICLE_PRACTICE_REWARD_PER_QUESTION;
+  const expPerQuestion = isTrial ?
+    CHRONICLE_TRIAL_EXP_PER_QUESTION :
+    CHRONICLE_PRACTICE_EXP_PER_QUESTION;
+
+  return {
+    reward: Math.round(safeQuestionCount * rewardPerQuestion),
+    exp: Math.round(safeQuestionCount * expPerQuestion),
+  };
+}
+
 async function getQuestionStats(
   userId: string,
   chapterId: string
@@ -602,8 +625,10 @@ async function createChronicleQuizForUser(
     }
   }
 
-  const reward = quizType === "trial" ? 120 : 45;
-  const exp = quizType === "trial" ? 90 : 35;
+  const {reward, exp} = getChronicleQuizEconomy({
+    quizType,
+    questionCount: selectedQuestions.length,
+  });
 
   await quizRef.set({
     title: slot.title ?? "Виклик Хроніки",
