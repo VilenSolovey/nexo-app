@@ -24,4 +24,10 @@ export interface UserProfile {
   createdAt?: string
   lastActiveDate?: string
   longestStreak?: number
+  stats?: {
+    mistakesFixed?: number
+    bestCorrectStreak?: number
+  }
+  mistakesFixed?: number
+  bestCorrectStreak?: number
 }

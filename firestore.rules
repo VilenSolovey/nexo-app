@@ -52,6 +52,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /achievementDefinitions/{achievementId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /quizRuns/{runId} {
       allow read: if ownsExistingDocument();
       allow write: if false;
@@ -83,8 +88,8 @@ service cloud.firestore {
     }
 
     match /users/{userId}/achievements/{achievementId} {
-      allow read, create, update: if ownsUserDocument(userId);
-      allow delete: if false;
+      allow read: if ownsUserDocument(userId);
+      allow write: if false;
     }
 
     match /quizzes/{quizId} {
