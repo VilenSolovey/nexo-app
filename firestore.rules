@@ -22,6 +22,12 @@ service cloud.firestore {
       return signedIn() && documentId.matches(request.auth.uid + "_.*");
     }
 
+    function canReadQuiz() {
+      return !('ownerId' in resource.data) ||
+        resource.data.ownerId == null ||
+        (signedIn() && resource.data.ownerId == request.auth.uid);
+    }
+
     match /chapters/{chapterId} {
       allow read: if true;
       allow write: if false;
@@ -82,9 +88,7 @@ service cloud.firestore {
     }
 
     match /quizzes/{quizId} {
-      allow read: if !('ownerId' in resource.data) ||
-        resource.data.ownerId == null ||
-        resource.data.ownerId == request.auth.uid;
+      allow read: if canReadQuiz();
       allow write: if false;
     }
 

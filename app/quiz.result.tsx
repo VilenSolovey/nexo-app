@@ -96,9 +96,9 @@ export default function QuizResultScreen() {
   const earnedExp = Math.floor(boostedExpBase * rewardMultiplier);
 
   useEffect(() => {
-    if (!quizId) return;
-    getQuizById(String(quizId)).then(setQuiz).catch(console.error);
-  }, [quizId]);
+    if (!quizId || !userId) return;
+    getQuizById(String(quizId), userId).then(setQuiz).catch(console.error);
+  }, [quizId, userId]);
 
   useEffect(() => {
     if (!userId || !quiz?.id) return;

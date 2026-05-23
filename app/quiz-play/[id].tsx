@@ -177,13 +177,20 @@ export default function QuizPlayScreen() {
   answersRef.current = answers;
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !userId) return;
     setLoading(true);
-    getQuizById(String(id))
-      .then(setQuiz)
+    getQuizById(String(id), userId)
+      .then((loadedQuiz) => {
+        if (!loadedQuiz) {
+          setError('Квіз не знайдено')
+          return
+        }
+
+        setQuiz(loadedQuiz)
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, userId]);
 
   useEffect(() => {
     if (!quiz?.id || !userId) return;
@@ -654,6 +661,18 @@ export default function QuizPlayScreen() {
         </LinearGradient>
       )
     }
+
+  if (error || !quiz) {
+    return (
+      <LinearGradient colors={[Theme.background, Theme.card]} style={{ flex: 1 }}>
+        <SafeArea>
+          <Text style={{ color: Theme.text }}>
+            {error ?? 'Квіз не знайдено.'}
+          </Text>
+        </SafeArea>
+      </LinearGradient>
+    )
+  }
 
   return (
     <LinearGradient colors={[Theme.background, Theme.card]} style={{ flex: 1 }}>
