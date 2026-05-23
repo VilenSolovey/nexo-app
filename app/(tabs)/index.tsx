@@ -18,7 +18,7 @@ import { registerDailyActivity } from "@nexo/services/user.service"
 import type { NewsItem, RecentItem } from "@nexo/types/quiz.types"
 import type { UserQuizProgress } from "@nexo/types/result.types"
 import { getAvatarSeed } from "@nexo/utils/profile-customization"
-import { isQuizRecent, toMillis } from "@nexo/utils/quiz-progress"
+import { shouldShowQuizInRecent, toMillis } from "@nexo/utils/quiz-progress"
 
 function joinRecentQuizzes(
   quizzes: NewsItem[],
@@ -27,7 +27,7 @@ function joinRecentQuizzes(
   const progressIndex = new Map(progressList.map(progress => [progress.quizId, progress]))
 
   return quizzes
-    .filter((quiz) => isQuizRecent({
+    .filter((quiz) => shouldShowQuizInRecent({
       progress: progressIndex.get(quiz.id),
       createdAt: quiz.createdAt,
     }))
@@ -56,8 +56,7 @@ function joinRecentQuizzes(
 
 export default function HomeScreen() {
   const router = useRouter()
-  const { userProfile, loading: authLoading, refreshUserProfile } = useAuth()
-  const userId = userProfile?.uid ?? userProfile?.id
+  const { userId, userProfile, loading: authLoading, refreshUserProfile } = useAuth()
   const { quizzes, loading: quizzesLoading, error, refetch: refetchQuizzes } = useAllQuizzes()
   const { progressList, progressMap, loading: progressLoading, refetch: refetchProgress } = useUserQuizProgress(userId)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -76,7 +75,7 @@ export default function HomeScreen() {
   
   const news = useMemo(
     () => quizzes
-      .filter((quiz) => !isQuizRecent({
+      .filter((quiz) => !shouldShowQuizInRecent({
         progress: progressMap.get(quiz.id),
         createdAt: quiz.createdAt,
       }))

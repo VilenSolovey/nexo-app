@@ -10,6 +10,7 @@ import { getLevelFromExp } from '@nexo/utils/level';
 
 interface AuthContextType {
   user: User | null;
+  userId: string | undefined;
   userProfile: UserProfile | null;
   loading: boolean;
   signInEmail: (email: string, password: string) => Promise<void>;
@@ -27,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [levelUpState, setLevelUpState] = useState<{ previousLevel: number; nextLevel: number } | null>(null);
   const hasHydratedProfileRef = useRef(false);
   const lastLevelRef = useRef<number | null>(null);
+  const userId = user?.uid ?? userProfile?.uid ?? userProfile?.id;
 
   const createUserProfile = async (uid: string, email: string, displayName: string) => {
     const now = new Date().toISOString();
@@ -163,7 +165,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, signInEmail, signUp, signOut, refreshUserProfile }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        userId,
+        userProfile,
+        loading,
+        signInEmail,
+        signUp,
+        signOut,
+        refreshUserProfile,
+      }}
+    >
       {children}
 
       <Modal

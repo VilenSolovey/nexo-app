@@ -33,6 +33,7 @@ export interface SaveQuizAttemptParams {
   leftAppDuringQuiz?: boolean
   backgroundCount?: number
   backgroundDurationMs?: number
+  maxAttempts?: number
 }
 
 export interface SaveQuizAttemptResult {
@@ -62,6 +63,7 @@ export async function saveQuizAttempt(
     leftAppDuringQuiz = false,
     backgroundCount = 0,
     backgroundDurationMs = 0,
+    maxAttempts,
   } = params
   const percentageScore = Math.round((score / total) * 100)
 
@@ -94,7 +96,7 @@ export async function saveQuizAttempt(
     firstTimeReward = passed
     const newPassedCount = passed ? 1 : 0
     const newAttempts = 1
-    mastered = isQuizCompleted(newAttempts)
+    mastered = isQuizCompleted(newAttempts, percentageScore, maxAttempts)
 
     const newProgress: Omit<UserQuizProgress, 'lastPlayedAt'> & { lastPlayedAt: any } = {
       userId,
@@ -121,7 +123,7 @@ export async function saveQuizAttempt(
     const newAttempts = prev.attempts + 1
     const newPassedCount = prev.passedCount + (passed ? 1 : 0)
     const newBestScore = Math.max(prev.bestScore, percentageScore)
-    mastered = isQuizCompleted(newAttempts)
+    mastered = Boolean(prev.completed) || isQuizCompleted(newAttempts, newBestScore, maxAttempts)
 
     firstTimeReward = false
 

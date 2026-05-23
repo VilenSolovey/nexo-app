@@ -59,6 +59,15 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="chronicle"
+        options={{
+          title: "Хроніка",
+          tabBarIcon: (props) => (
+            <AnimatedTabIcon {...props} name="map-outline" />
+          ),
+        }}
+      />
        <Tabs.Screen
         name="achievements"
         options={{

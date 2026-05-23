@@ -3,6 +3,7 @@ import Constants from "expo-constants"
 import { getApp, getApps, initializeApp } from "firebase/app"
 import { getAuth, getReactNativePersistence, initializeAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
+import { getFunctions } from "firebase/functions"
 import { getStorage } from "firebase/storage"
 
 type ExpoExtra = {
@@ -66,7 +67,7 @@ const firebaseConfig = {
     process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID ?? extra.FIREBASE_MEASUREMENT_ID,
 }
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 
 function createAuth() {
   try {
@@ -81,3 +82,4 @@ function createAuth() {
 export const db = getFirestore(app)
 export const auth = createAuth()
 export const storage = getStorage(app)
+export const functions = getFunctions(app, "europe-west1")

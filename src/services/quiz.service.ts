@@ -1,10 +1,14 @@
-// src/services/quiz.service.ts
 import { collection, getDocs, doc, getDoc } from "firebase/firestore"
 import { db } from "@nexo/services/firebase"
 
-export async function getAllQuizzes() {
+export async function getAllQuizzes(userId?: string | null) {
   const snapshot = await getDocs(collection(db, "quizzes"))
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  return snapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .filter((quiz: any) => {
+      if (!quiz.ownerId) return true
+      return Boolean(userId) && quiz.ownerId === userId
+    })
 }
 
 export async function getQuizById(quizId: string) {

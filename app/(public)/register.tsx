@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import { Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useAuth } from '@nexo/contexts/AuthProvider'
+import { useFeedback } from '@nexo/contexts/FeedbackProvider'
 import { Theme } from '@nexo/constants/theme'
 import { AuthLayout } from '@nexo/components/Auth/AuthLayout'
 import { AuthHeader } from '@nexo/components/Auth/AuthHeader'
@@ -24,30 +24,48 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false)
 
   const { signUp } = useAuth()
+  const { showModal, showToast } = useFeedback()
   const router = useRouter()
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Помилка', 'Будь ласка, заповніть всі поля')
+      showToast({
+        type: 'warning',
+        message: 'Будь ласка, заповніть всі поля.',
+      })
       return
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Помилка', 'Паролі не співпадають')
+      showToast({
+        type: 'warning',
+        message: 'Паролі не співпадають.',
+      })
       return
     }
 
     if (password.length < 6) {
-      Alert.alert('Помилка', 'Пароль повинен бути мінімум 6 символів')
+      showToast({
+        type: 'warning',
+        message: 'Пароль повинен бути мінімум 6 символів.',
+      })
       return
     }
 
     setLoading(true)
     try {
       await signUp(email, password, name)
+      showToast({
+        type: 'success',
+        message: 'Акаунт створено. Тепер можна увійти.',
+      })
       router.push('/(public)/login')
     } catch (error: any) {
-      Alert.alert('Помилка', error.message || 'Не вдалося зареєструватися')
+      showModal({
+        type: 'error',
+        title: 'Не вдалося зареєструватися',
+        message: error.message || 'Спробуйте ще раз трохи пізніше.',
+      })
     } finally {
       setLoading(false)
     }

@@ -23,7 +23,7 @@ export const StreakEyebrow = styled.Text`
   color: ${({ theme }) => theme.warning};
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.9px;
+  letter-spacing: 0;
 `
 
 export const StreakHeaderRow = styled.View`
@@ -48,9 +48,12 @@ export const StreakEmoji = styled.Text`
 `
 
 export const StreakText = styled.Text`
+  flex: 1;
+  flex-shrink: 1;
   margin-left: 10px;
   color: ${({ theme }) => theme.text};
   font-size: 17px;
+  line-height: 22px;
   font-weight: 800;
 `
 

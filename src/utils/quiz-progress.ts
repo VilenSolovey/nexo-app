@@ -9,7 +9,16 @@ type TimestampLike =
   | undefined
 
 export const MAX_QUIZ_ATTEMPTS = 3
+export const PERFECT_QUIZ_SCORE = 100
 export const QUIZ_BECOMES_RECENT_AFTER_MS = 3 * 24 * 60 * 60 * 1000
+
+export function getQuizMaxAttempts(maxAttempts?: number | null): number {
+  if (typeof maxAttempts !== 'number' || !Number.isFinite(maxAttempts)) {
+    return MAX_QUIZ_ATTEMPTS
+  }
+
+  return Math.max(1, Math.floor(maxAttempts))
+}
 
 export function getQuizRewardMultiplier(attemptNumber: number): number {
   if (attemptNumber <= 1) return 1
@@ -18,12 +27,25 @@ export function getQuizRewardMultiplier(attemptNumber: number): number {
   return 0
 }
 
-export function isQuizCompleted(attempts: number): boolean {
-  return attempts >= MAX_QUIZ_ATTEMPTS
+export function isQuizCompleted(attempts: number, bestScore = 0, maxAttempts?: number | null): boolean {
+  return attempts >= getQuizMaxAttempts(maxAttempts) || bestScore >= PERFECT_QUIZ_SCORE
 }
 
-export function canStartQuiz(progress: UserQuizProgress | null | undefined): boolean {
-  return !isQuizCompleted(progress?.attempts ?? 0)
+export function isQuizProgressCompleted(
+  progress: UserQuizProgress | null | undefined,
+  maxAttempts?: number | null,
+): boolean {
+  if (!progress) return false
+
+  const bestScore = Math.max(progress.bestScore ?? 0, progress.officialScore ?? 0)
+  return Boolean(progress.completed) || isQuizCompleted(progress.attempts ?? 0, bestScore, maxAttempts)
+}
+
+export function canStartQuiz(
+  progress: UserQuizProgress | null | undefined,
+  maxAttempts?: number | null,
+): boolean {
+  return !isQuizProgressCompleted(progress, maxAttempts)
 }
 
 export function toMillis(value: TimestampLike): number | null {
@@ -49,14 +71,15 @@ export function toMillis(value: TimestampLike): number | null {
   return null
 }
 
-export function isQuizRecent(params: {
+export function shouldShowQuizInRecent(params: {
   progress?: UserQuizProgress | null
   createdAt?: TimestampLike
   now?: number
+  maxAttempts?: number | null
 }): boolean {
-  const { progress, createdAt, now = Date.now() } = params
+  const { progress, createdAt, now = Date.now(), maxAttempts } = params
 
-  if (isQuizCompleted(progress?.attempts ?? 0)) {
+  if (isQuizProgressCompleted(progress, maxAttempts)) {
     return true
   }
 

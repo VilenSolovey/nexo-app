@@ -303,6 +303,7 @@ export const StatsGrid = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
   gap: 12px;
+  align-items: stretch;
 `
 
 export const StatsLoading = styled.View`
@@ -318,13 +319,16 @@ export const StatsLoadingText = styled.Text`
 `
 
 export const StatCard = styled.View`
-  width: 48%;
-  min-width: 150px;
+  flex-grow: 1;
+  flex-basis: 47%;
+  max-width: 48.5%;
+  min-height: 124px;
   background-color: ${({ theme }) => theme.background};
   border-radius: 18px;
   padding: 14px;
   border-width: 1px;
   border-color: ${({ theme }) => theme.cardBorder};
+  justify-content: flex-start;
 `
 
 export const StatValue = styled.Text`

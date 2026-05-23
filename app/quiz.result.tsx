@@ -2,11 +2,18 @@ import React, { useCallback, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Theme } from '@nexo/constants/theme';
 import { useAuth } from '@nexo/contexts/AuthProvider';
+import { useFeedback } from '@nexo/contexts/FeedbackProvider';
+import { recordChronicleQuizAttempt } from '@nexo/services/chronicle-quiz.service';
 import { getQuizById } from '@nexo/services/quiz.service';
 import { getQuizProgress, saveQuizAttempt } from '@nexo/services/progress.service';
 import { completeQuizSession } from '@nexo/services/quiz-session.service';
 import { applyUserRewards, registerDailyActivity } from '@nexo/services/user.service';
-import { getQuizRewardMultiplier, isQuizCompleted, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
+import {
+  getQuizRewardMultiplier,
+  getQuizMaxAttempts,
+  isQuizCompleted,
+  PERFECT_QUIZ_SCORE,
+} from '@nexo/utils/quiz-progress';
 import {
   Container,
   SafeArea,
@@ -17,6 +24,19 @@ import { ResultHero } from '@nexo/components/Quiz/Result/ResultHero';
 import { ScoreSummaryCard } from '@nexo/components/Quiz/Result/ScoreSummaryCard';
 import { RewardsSummaryCard } from '@nexo/components/Quiz/Result/RewardsSummaryCard';
 import { ResultActions } from '@nexo/components/Quiz/Result/ResultActions';
+
+function parseAnswersParam(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object'
+      ? parsed as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function QuizResultScreen() {
   const {
@@ -33,10 +53,11 @@ export default function QuizResultScreen() {
     backgroundDurationMs,
     coinsBoostMultiplier,
     expBoostMultiplier,
+    answers,
   } = useLocalSearchParams();
   const router = useRouter();
-  const { userProfile, refreshUserProfile } = useAuth();
-  const userId = userProfile?.uid ?? userProfile?.id;
+  const { userId, refreshUserProfile } = useAuth();
+  const { showModal } = useFeedback();
 
   const [quiz, setQuiz] = React.useState<any | null>(null);
   const [mastered, setMastered] = React.useState(false);
@@ -55,12 +76,18 @@ export default function QuizResultScreen() {
   const resolvedBackgroundDurationMs = parseInt(backgroundDurationMs as string) || 0;
   const resolvedCoinsBoost = Math.max(parseInt(coinsBoostMultiplier as string) || 1, 1);
   const resolvedExpBoost = Math.max(parseInt(expBoostMultiplier as string) || 1, 1);
+  const resolvedAnswers = React.useMemo(
+    () => parseAnswersParam(answers),
+    [answers],
+  );
   const percentage = Math.round((correctCount / totalCount) * 100);
+  const hasPerfectScore = percentage >= PERFECT_QUIZ_SCORE;
   const resolvedAttempt = attempt ?? 1;
+  const maxAttempts = getQuizMaxAttempts(quiz?.maxAttempts);
 
   const rewardMultiplier = getQuizRewardMultiplier(resolvedAttempt);
   const isReducedReward = resolvedAttempt > 1;
-  const canRetake = !isQuizCompleted(resolvedAttempt);
+  const canRetake = !isQuizCompleted(resolvedAttempt, percentage, maxAttempts);
   const baseCoins = Number(quiz?.coinReward ?? quiz?.reward ?? 0);
   const baseExp = Number(quiz?.expReward ?? quiz?.exp ?? 0);
   const boostedCoinsBase = baseCoins * resolvedCoinsBoost;
@@ -95,6 +122,15 @@ export default function QuizResultScreen() {
       const baseExp = Number(quiz.expReward ?? quiz.exp ?? 0);
       const finalCoins = Math.floor(baseCoins * resolvedCoinsBoost * effectiveRewardMultiplier);
       const finalExp = Math.floor(baseExp * resolvedExpBoost * effectiveRewardMultiplier);
+      const syncChronicleAttempt = async () => {
+        if (quiz.source !== 'chronicle' || !resolvedAnswers) return;
+
+        await recordChronicleQuizAttempt({
+          quizId: quiz.id,
+          answers: resolvedAnswers,
+          sessionId: typeof sessionId === 'string' ? sessionId : undefined,
+        });
+      };
 
       if (typeof sessionId === 'string' && sessionId.trim()) {
         await completeQuizSession({
@@ -108,6 +144,41 @@ export default function QuizResultScreen() {
           backgroundCount: resolvedBackgroundCount,
           backgroundDurationMs: resolvedBackgroundDurationMs,
         });
+      }
+
+      if (quiz.source === 'chronicle' && resolvedAnswers) {
+        try {
+          await syncChronicleAttempt();
+        } catch (chronicleError) {
+          console.error('Error syncing chronicle progress:', chronicleError);
+          showModal({
+            type: 'warning',
+            title: 'Хроніка не синхронізувалась',
+            message: 'Результат квізу збережено, але фрагменти хроніки могли не оновитися. Перевірте інтернет і відкрийте Хроніки ще раз.',
+            primaryAction: {
+              label: 'Спробувати ще раз',
+              onPress: () => {
+                void syncChronicleAttempt()
+                  .then(() => {
+                    showModal({
+                      type: 'success',
+                      title: 'Хроніку оновлено',
+                      message: 'Прогрес і фрагменти синхронізовані.',
+                    });
+                  })
+                  .catch((retryError) => {
+                    console.error('Error retrying chronicle sync:', retryError);
+                    showModal({
+                      type: 'error',
+                      title: 'Не вдалося оновити Хроніку',
+                      message: 'Спробуйте ще раз трохи пізніше.',
+                    });
+                  });
+              },
+            },
+            secondaryAction: { label: 'Пізніше' },
+          });
+        }
       }
 
       const progressResult = await saveQuizAttempt({
@@ -124,6 +195,7 @@ export default function QuizResultScreen() {
         leftAppDuringQuiz: didLeaveAppDuringQuiz,
         backgroundCount: resolvedBackgroundCount,
         backgroundDurationMs: resolvedBackgroundDurationMs,
+        maxAttempts,
       });
 
       setMastered(progressResult.mastered);
@@ -153,10 +225,13 @@ export default function QuizResultScreen() {
     resolvedBackgroundDurationMs,
     resolvedCoinsBoost,
     resolvedExpBoost,
+    resolvedAnswers,
+    maxAttempts,
     didLeaveAppDuringQuiz,
     sessionId,
     totalCount,
     refreshUserProfile,
+    showModal,
     userId,
   ]);
 
@@ -228,7 +303,11 @@ export default function QuizResultScreen() {
             <ResultBanner
               variant="mastered"
               icon="trophy"
-              text={`🎓 Квіз завершено! Використано ${MAX_QUIZ_ATTEMPTS} спроби.`}
+              text={
+                hasPerfectScore
+                  ? 'Квіз завершено! Набрано 100%.'
+                  : `Квіз завершено! Використано ${maxAttempts} спроби.`
+              }
             />
           )}
 

@@ -1,0 +1,116 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsExistingDocument() {
+      return signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    function ownsIncomingDocument() {
+      return signedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    function ownsUserDocument(userId) {
+      return signedIn() && userId == request.auth.uid;
+    }
+
+    function ownsFlatUserDocument(documentId) {
+      return signedIn() && documentId.matches(request.auth.uid + "_.*");
+    }
+
+    match /chapters/{chapterId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /fragments/{fragmentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /questions/{questionId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /challengeSlots/{slotId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /functionTesters/{userId} {
+      allow read, write: if false;
+    }
+
+    match /quizRuns/{runId} {
+      allow read: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /userQuestionStats/{statId} {
+      allow read: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /userFragmentProgress/{progressId} {
+      allow read: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /userChapterProgress/{progressId} {
+      allow get: if ownsExistingDocument() || ownsFlatUserDocument(progressId);
+      allow list: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /userChallengeProgress/{progressId} {
+      allow read: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /users/{userId} {
+      allow read, write: if ownsUserDocument(userId);
+    }
+
+    match /users/{userId}/achievements/{achievementId} {
+      allow read, create, update: if ownsUserDocument(userId);
+      allow delete: if false;
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if !('ownerId' in resource.data) ||
+        resource.data.ownerId == null ||
+        resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /results/{resultId} {
+      allow read: if ownsExistingDocument();
+      allow create: if ownsIncomingDocument();
+      allow update, delete: if false;
+    }
+
+    match /userQuizProgress/{progressId} {
+      allow get: if ownsExistingDocument() || ownsFlatUserDocument(progressId);
+      allow list: if ownsExistingDocument();
+      allow create: if ownsIncomingDocument();
+      allow update: if ownsExistingDocument() && ownsIncomingDocument();
+      allow delete: if false;
+    }
+
+    match /quizSessions/{sessionId} {
+      allow read: if ownsExistingDocument();
+      allow create: if ownsIncomingDocument();
+      allow update: if ownsExistingDocument() && ownsIncomingDocument();
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

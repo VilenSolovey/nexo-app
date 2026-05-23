@@ -12,15 +12,14 @@ import { useUserQuizProgress } from '@nexo/hooks/useUserQuizProgress';
 import { Header, HeaderTitle, ScrollContent, LoadingText } from '@nexo/components/Quiz/Discovery/Quiz.styled';
 import { RefreshControl } from 'react-native'
 import { Theme } from '@nexo/constants/theme'
-import { isQuizRecent } from '@nexo/utils/quiz-progress';
+import { shouldShowQuizInRecent } from '@nexo/utils/quiz-progress';
 
 export default function QuizzesScreen() {
-  const { userProfile } = useAuth();
-  const userId = userProfile?.uid ?? userProfile?.id;
+  const { userId } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
 
   const [selectedType, setSelectedType] = useState<QuizType | 'all'>('all');
-  const { quizzes, loading: quizzesLoading, error: quizzesError, refetch: refetchQuizzes } = useAllQuizzes()
+  const { quizzes, loading: quizzesLoading, error: quizzesError, refetch: refetchQuizzes } = useAllQuizzes(userId)
   const {
     progressMap,
     loading: progressLoading,
@@ -59,13 +58,13 @@ export default function QuizzesScreen() {
 
   const filteredQuizzes = quizzes.filter(quiz => {
     const progress = progressMap.get(quiz.id)
-    const isHidden = isQuizRecent({
+    const shouldHideFromAvailable = shouldShowQuizInRecent({
       progress,
       createdAt: quiz.createdAt,
     })
     const matchesType = selectedType === `all` || quiz.type === selectedType;
     const matchesSearch = quiz.title.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesType && matchesSearch && !isHidden;
+    return matchesType && matchesSearch && !shouldHideFromAvailable;
   });
 
   useEffect(() => {
