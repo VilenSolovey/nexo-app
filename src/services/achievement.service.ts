@@ -1,23 +1,26 @@
 import {
   collection,
-  doc,
   getDocs,
   orderBy,
   query,
-  runTransaction,
-  serverTimestamp,
   where,
-  writeBatch,
 } from 'firebase/firestore'
-import { ACHIEVEMENTS } from '@nexo/constants/achievements'
-import { db } from '@nexo/services/firebase'
+import { app, auth, db } from '@nexo/services/firebase'
 import type {
+  AchievementCategory,
+  AchievementDefinition,
+  AchievementMetric,
+  AchievementTierDefinition,
   AchievementViewModel,
   UserAchievementRecord,
   UserAchievementTierRecord,
 } from '@nexo/types/achievement.types'
+import type {
+  UserChallengeProgress,
+  UserChapterProgress,
+  UserFragmentProgress,
+} from '@nexo/types/chronicle.types'
 import type { QuizResult } from '@nexo/types/result.types'
-import { getLevelFromExp } from '@nexo/utils/level'
 
 function normalizeTimestamp(value: unknown): string | number | null {
   if (!value) return null
@@ -43,8 +46,152 @@ function normalizeTierRecord(value: unknown): UserAchievementTierRecord {
   }
 }
 
-function getAchievementDefinition(achievementId: string) {
-  return ACHIEVEMENTS.find((item) => item.id === achievementId) ?? null
+const ACHIEVEMENT_CATEGORIES = new Set<AchievementCategory>([
+  'progress',
+  'skill',
+  'streak',
+  'mastery',
+  'chronicle',
+])
+const ACHIEVEMENT_METRICS = new Set<AchievementMetric>([
+  'uniqueQuizzes',
+  'perfectScores',
+  'streakDays',
+  'level',
+  'completedChronicles',
+  'unlockedFragments',
+  'mistakesFixed',
+  'bestCorrectStreak',
+  'masteredChronicles',
+  'perfectChallenges',
+])
+
+function asOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function normalizeDefinitionTier(value: unknown): AchievementTierDefinition | null {
+  const raw = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
+  const id = asOptionalString(raw.id)
+  const title = asOptionalString(raw.title)
+  const target = Number(raw.target)
+  const rewardCoins = Number(raw.rewardCoins)
+  const rewardExp = raw.rewardExp === undefined ? undefined : Number(raw.rewardExp)
+
+  if (!id || !title || !Number.isFinite(target) || target <= 0) return null
+  if (!Number.isFinite(rewardCoins) || rewardCoins < 0) return null
+  if (rewardExp !== undefined && (!Number.isFinite(rewardExp) || rewardExp < 0)) return null
+
+  return {
+    id,
+    title,
+    target,
+    rewardCoins,
+    ...(rewardExp !== undefined ? { rewardExp } : {}),
+  }
+}
+
+function normalizeAchievementDefinition(id: string, data: Record<string, unknown>): AchievementDefinition | null {
+  if (data.active === false) return null
+
+  const title = asOptionalString(data.title)
+  const description = asOptionalString(data.description)
+  const category = asOptionalString(data.category)
+  const metric = asOptionalString(data.metric)
+  const icon = asOptionalString(data.icon)
+  const tiers = Array.isArray(data.tiers)
+    ? data.tiers
+        .map(normalizeDefinitionTier)
+        .filter((tier): tier is AchievementTierDefinition => tier !== null)
+    : []
+
+  if (
+    !title ||
+    !description ||
+    !category ||
+    !metric ||
+    !icon ||
+    !ACHIEVEMENT_CATEGORIES.has(category as AchievementCategory) ||
+    !ACHIEVEMENT_METRICS.has(metric as AchievementMetric) ||
+    tiers.length === 0
+  ) {
+    return null
+  }
+
+  const order = Number(data.order)
+
+  return {
+    id,
+    title,
+    description,
+    category: category as AchievementCategory,
+    metric: metric as AchievementMetric,
+    icon,
+    accentColor: asOptionalString(data.accentColor),
+    active: data.active !== false,
+    order: Number.isFinite(order) ? order : undefined,
+    tiers,
+  }
+}
+
+type ClaimAchievementRewardResponse = {
+  achievementId: string
+  tierId: string
+  rewardCoins: number
+  rewardExp: number
+  coins: number
+  exp: number
+  level: number
+}
+
+async function callAchievementFunction<TInput, TOutput>(
+  functionName: string,
+  input: TInput,
+): Promise<TOutput> {
+  if (!auth.currentUser) {
+    throw new Error('Немає активної Firebase Auth сесії. Вийдіть і зайдіть в акаунт ще раз.')
+  }
+
+  const token = await auth.currentUser.getIdToken(true)
+  const projectId = app.options.projectId
+
+  if (!projectId) {
+    throw new Error('Firebase projectId не налаштований.')
+  }
+
+  const response = await fetch(
+    `https://europe-west1-${projectId}.cloudfunctions.net/${functionName}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data: input }),
+    },
+  )
+
+  const responseText = await response.text()
+  let payload: any = null
+
+  try {
+    payload = responseText ? JSON.parse(responseText) : null
+  } catch {
+    throw new Error(
+      `Firebase Function ${functionName} returned non-JSON response: ${response.status} ${responseText.slice(0, 120)}`,
+    )
+  }
+
+  if (!response.ok || payload.error) {
+    const errorMessage =
+      payload.error?.message ??
+      payload.error?.status ??
+      `Firebase Function ${functionName} failed.`
+
+    throw new Error(errorMessage)
+  }
+
+  return payload.result as TOutput
 }
 
 export async function getUserResultsList(userId: string): Promise<QuizResult[]> {
@@ -60,6 +207,20 @@ export async function getUserResultsList(userId: string): Promise<QuizResult[]> 
     id: item.id,
     ...(item.data() as Omit<QuizResult, 'id'>),
   }))
+}
+
+export async function getAchievementDefinitions(): Promise<AchievementDefinition[]> {
+  const snap = await getDocs(collection(db, 'achievementDefinitions'))
+
+  return snap.docs
+    .map((item) => normalizeAchievementDefinition(item.id, item.data()))
+    .filter((definition): definition is AchievementDefinition => definition !== null)
+    .sort(
+      (left, right) =>
+        Number(left.order ?? Number.MAX_SAFE_INTEGER) -
+          Number(right.order ?? Number.MAX_SAFE_INTEGER) ||
+        left.title.localeCompare(right.title),
+    )
 }
 
 export async function getUserAchievementRecords(userId: string): Promise<UserAchievementRecord[]> {
@@ -86,149 +247,59 @@ export async function getUserAchievementRecords(userId: string): Promise<UserAch
   })
 }
 
+export async function getUserAchievementChapterProgressList(
+  userId: string,
+): Promise<UserChapterProgress[]> {
+  const q = query(collection(db, 'userChapterProgress'), where('userId', '==', userId))
+  const snap = await getDocs(q)
+
+  return snap.docs.map((item) => ({
+    id: item.id,
+    ...item.data(),
+  })) as unknown as UserChapterProgress[]
+}
+
+export async function getUserAchievementFragmentProgressList(
+  userId: string,
+): Promise<UserFragmentProgress[]> {
+  const q = query(collection(db, 'userFragmentProgress'), where('userId', '==', userId))
+  const snap = await getDocs(q)
+
+  return snap.docs.map((item) => ({
+    id: item.id,
+    ...item.data(),
+  })) as unknown as UserFragmentProgress[]
+}
+
+export async function getUserAchievementChallengeProgressList(
+  userId: string,
+): Promise<UserChallengeProgress[]> {
+  const q = query(collection(db, 'userChallengeProgress'), where('userId', '==', userId))
+  const snap = await getDocs(q)
+
+  return snap.docs.map((item) => ({
+    id: item.id,
+    ...item.data(),
+  })) as unknown as UserChallengeProgress[]
+}
+
 export async function syncUnlockedAchievements(
   userId: string,
   achievements: AchievementViewModel[],
   existingRecords: UserAchievementRecord[] = [],
 ) {
-  const existingMap = new Map(existingRecords.map((item) => [item.achievementId, item]))
-  const batch = writeBatch(db)
-  let hasWrites = false
+  void userId
+  void achievements
+  void existingRecords
 
-  achievements.forEach((achievement) => {
-    const currentRecord = existingMap.get(achievement.id)
-    const pendingTiers = achievement.tiers.filter(
-      (tier) => tier.unlocked && !currentRecord?.tiers?.[tier.id]?.unlockedAt,
-    )
-
-    const nextHighestUnlockedTier = Math.max(
-      currentRecord?.highestUnlockedTier ?? -1,
-      achievement.highestUnlockedTier,
-    )
-
-    if (
-      pendingTiers.length === 0 &&
-      nextHighestUnlockedTier <= (currentRecord?.highestUnlockedTier ?? -1)
-    ) {
-      return
-    }
-
-    const tiersPayload = pendingTiers.reduce<Record<string, { unlockedAt: unknown }>>(
-      (acc, tier) => {
-        acc[tier.id] = {
-          unlockedAt: serverTimestamp(),
-        }
-        return acc
-      },
-      {},
-    )
-
-    batch.set(
-      doc(db, 'users', userId, 'achievements', achievement.id),
-      {
-        achievementId: achievement.id,
-        highestUnlockedTier: nextHighestUnlockedTier,
-        highestClaimedTier: currentRecord?.highestClaimedTier ?? -1,
-        tiers: tiersPayload,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    )
-
-    hasWrites = true
-  })
-
-  if (!hasWrites) return
-
-  await batch.commit()
+  await callAchievementFunction<Record<string, never>, unknown>('syncAchievementsHttp', {})
 }
 
 export async function claimAchievementReward(userId: string, achievementId: string, tierId: string) {
-  const achievement = getAchievementDefinition(achievementId)
+  void userId
 
-  if (!achievement) {
-    throw new Error('Achievement definition not found')
-  }
-
-  const tierIndex = achievement.tiers.findIndex((tier) => tier.id === tierId)
-  const tierDefinition = achievement.tiers[tierIndex]
-
-  if (tierIndex < 0 || !tierDefinition) {
-    throw new Error('Achievement tier not found')
-  }
-
-  return runTransaction(db, async (transaction) => {
-    const achievementRef = doc(db, 'users', userId, 'achievements', achievementId)
-    const userRef = doc(db, 'users', userId)
-    const achievementSnap = await transaction.get(achievementRef)
-    const userSnap = await transaction.get(userRef)
-
-    if (!userSnap.exists()) {
-      throw new Error('User profile not found')
-    }
-
-    if (!achievementSnap.exists()) {
-      throw new Error('Achievement is not unlocked yet')
-    }
-
-    const raw = achievementSnap.data()
-    const rawTiers =
-      typeof raw.tiers === 'object' && raw.tiers !== null
-        ? (raw.tiers as Record<string, unknown>)
-        : {}
-    const tiers = Object.fromEntries(
-      Object.entries(rawTiers).map(([key, value]) => [key, normalizeTierRecord(value)]),
-    ) as Record<string, UserAchievementTierRecord>
-    const requestedTier = tiers[tierId]
-
-    if (!requestedTier?.unlockedAt) {
-      throw new Error('Tier is not unlocked yet')
-    }
-
-    if (requestedTier.claimedAt) {
-      throw new Error('Reward already claimed')
-    }
-
-    const firstUnclaimedTierId =
-      achievement.tiers.find((tier) => tiers[tier.id]?.unlockedAt && !tiers[tier.id]?.claimedAt)?.id ?? null
-
-    if (firstUnclaimedTierId !== tierId) {
-      throw new Error('Claim previous unlocked tier first')
-    }
-
-    transaction.set(
-      achievementRef,
-      {
-        highestClaimedTier: Math.max(Number(raw.highestClaimedTier ?? -1), tierIndex),
-        updatedAt: serverTimestamp(),
-        tiers: {
-          [tierId]: {
-            unlockedAt: requestedTier.unlockedAt,
-            claimedAt: serverTimestamp(),
-          },
-        },
-      },
-      { merge: true },
-    )
-
-    const userData = userSnap.data()
-    const currentCoins = Number(userData.coins ?? 0)
-    const currentExp = Number(userData.exp ?? 0)
-    const nextCoins = Math.max(0, currentCoins + tierDefinition.rewardCoins)
-    const nextExp = Math.max(0, currentExp + (tierDefinition.rewardExp ?? 0))
-    const nextLevel = getLevelFromExp(nextExp)
-
-    transaction.update(userRef, {
-      coins: nextCoins,
-      exp: nextExp,
-      level: nextLevel,
-    })
-
-    return {
-      achievementId,
-      tierId,
-      rewardCoins: tierDefinition.rewardCoins,
-      rewardExp: tierDefinition.rewardExp ?? 0,
-    }
-  })
+  return callAchievementFunction<
+    { achievementId: string; tierId: string },
+    ClaimAchievementRewardResponse
+  >('claimAchievementRewardHttp', { achievementId, tierId })
 }

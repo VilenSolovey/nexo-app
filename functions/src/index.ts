@@ -7,6 +7,12 @@ import {
 } from "firebase-admin/firestore";
 import {setGlobalOptions} from "firebase-functions/v2";
 import {HttpsError, onRequest} from "firebase-functions/v2/https";
+import {
+  getAchievementDefinitions,
+  getLevelFromExp,
+  type AchievementDefinition,
+  type AchievementMetric,
+} from "./achievements.js";
 
 initializeApp();
 
@@ -78,6 +84,27 @@ type ChronicleQuizDocument = {
   maxAttempts?: number;
 };
 
+type QuizResultDocument = {
+  quizId?: string;
+  score?: number;
+  total?: number;
+};
+
+type UserChapterProgressDocument = {
+  completed?: boolean;
+  answered?: number;
+  accuracyPercent?: number;
+};
+
+type UserFragmentProgressDocument = {
+  unlocked?: boolean;
+};
+
+type UserChallengeProgressDocument = {
+  status?: string;
+  bestScore?: number;
+};
+
 type TrialUnlockState = {
   answered: number;
   correct: number;
@@ -90,6 +117,23 @@ type TrialUnlockState = {
   requiredAccuracyPercent: number;
   trialUnlocked: boolean;
 };
+
+type AchievementRecord = {
+  achievementId: string;
+  highestUnlockedTier?: number;
+  highestClaimedTier?: number;
+  tiers?: Record<string, {
+    unlockedAt?: unknown;
+    claimedAt?: unknown;
+  }>;
+};
+
+type ClaimAchievementInput = {
+  achievementId?: string;
+  tierId?: string;
+};
+
+type AchievementMetrics = Record<AchievementMetric, number>;
 
 type HttpRequest = {
   method: string;
@@ -168,6 +212,7 @@ async function handleHttpFunction<TInput, TResult>(params: {
   request: HttpRequest;
   response: HttpResponse;
   handler: (userId: string, input: TInput) => Promise<TResult>;
+  requireTesterAccess?: boolean;
 }): Promise<void> {
   if (params.request.method !== "POST") {
     params.response.status(405).json({
@@ -181,7 +226,9 @@ async function handleHttpFunction<TInput, TResult>(params: {
 
   try {
     const userId = await requireRequestUserId(params.request);
-    await requireTester(userId);
+    if (params.requireTesterAccess !== false) {
+      await requireTester(userId);
+    }
     const result = await params.handler(
       userId,
       (params.request.body?.data ?? {}) as TInput
@@ -211,6 +258,289 @@ function asString(value: unknown, fieldName: string): string {
   }
 
   return value.trim();
+}
+
+async function getAchievementRecords(
+  userId: string
+): Promise<Map<string, AchievementRecord>> {
+  const snapshot = await db.collection("users")
+    .doc(userId)
+    .collection("achievements")
+    .get();
+
+  return new Map(snapshot.docs.map((doc): [string, AchievementRecord] => {
+    const data = doc.data() as AchievementRecord;
+
+    return [
+      data.achievementId || doc.id,
+      {
+        achievementId: data.achievementId || doc.id,
+        highestUnlockedTier: Number(data.highestUnlockedTier ?? -1),
+        highestClaimedTier: Number(data.highestClaimedTier ?? -1),
+        tiers: data.tiers ?? {},
+      },
+    ];
+  }));
+}
+
+async function getAchievementMetrics(
+  userId: string
+): Promise<AchievementMetrics> {
+  const [userSnapshot, resultsSnapshot] = await Promise.all([
+    db.collection("users").doc(userId).get(),
+    db.collection("results").where("userId", "==", userId).get(),
+  ]);
+  const [
+    chapterProgressSnapshot,
+    fragmentProgressSnapshot,
+    challengeProgressSnapshot,
+  ] = await Promise.all([
+    db.collection("userChapterProgress").where("userId", "==", userId).get(),
+    db.collection("userFragmentProgress").where("userId", "==", userId).get(),
+    db.collection("userChallengeProgress").where("userId", "==", userId).get(),
+  ]);
+  const userData = userSnapshot.data() ?? {};
+  const userStats = typeof userData.stats === "object" &&
+    userData.stats !== null ?
+    userData.stats as Record<string, unknown> :
+    {};
+  const results = resultsSnapshot.docs.map((doc) =>
+    doc.data() as QuizResultDocument
+  );
+  const chapterProgressRows = chapterProgressSnapshot.docs.map((doc) =>
+    doc.data() as UserChapterProgressDocument
+  );
+  const fragmentProgressRows = fragmentProgressSnapshot.docs.map((doc) =>
+    doc.data() as UserFragmentProgressDocument
+  );
+  const challengeProgressRows = challengeProgressSnapshot.docs.map((doc) =>
+    doc.data() as UserChallengeProgressDocument
+  );
+  const uniqueQuizzes = new Set(
+    results
+      .map((result) => result.quizId)
+      .filter((quizId): quizId is string => typeof quizId === "string")
+  ).size;
+  const perfectScores = results.filter((result) =>
+    Number(result.total ?? 0) > 0 &&
+    Number(result.score ?? 0) === Number(result.total ?? 0)
+  ).length;
+  const streakDays = Number(userData.streakDays ?? userData.streak ?? 0);
+  const exp = Number(userData.exp ?? 0);
+  const level = getLevelFromExp(exp);
+  const completedChronicles = chapterProgressRows.filter((progress) =>
+    progress.completed === true
+  ).length;
+  const unlockedFragments = fragmentProgressRows.filter((progress) =>
+    progress.unlocked === true
+  ).length;
+  const masteredChronicles = chapterProgressRows.filter((progress) =>
+    Number(progress.answered ?? 0) >= 30 &&
+    Number(progress.accuracyPercent ?? 0) >= 80
+  ).length;
+  const perfectChallenges = challengeProgressRows.filter((progress) =>
+    (progress.status === "completed" || progress.status === "archived") &&
+    Number(progress.bestScore ?? 0) >= 100
+  ).length;
+  const mistakesFixed = Number(
+    userStats.mistakesFixed ?? userData.mistakesFixed ?? 0
+  );
+  const bestCorrectStreak = Number(
+    userStats.bestCorrectStreak ?? userData.bestCorrectStreak ?? 0
+  );
+
+  return {
+    uniqueQuizzes,
+    perfectScores,
+    streakDays,
+    level,
+    completedChronicles,
+    unlockedFragments,
+    mistakesFixed,
+    bestCorrectStreak,
+    masteredChronicles,
+    perfectChallenges,
+  };
+}
+
+async function syncAchievementsForUser(
+  userId: string,
+  definitions?: AchievementDefinition[]
+) {
+  const [resolvedDefinitions, metrics, records] = await Promise.all([
+    definitions ?? getAchievementDefinitions(db),
+    getAchievementMetrics(userId),
+    getAchievementRecords(userId),
+  ]);
+
+  if (!resolvedDefinitions.length) {
+    throw new HttpsError(
+      "failed-precondition",
+      "No active achievement definitions found."
+    );
+  }
+
+  const batch = db.batch();
+  const unlocked: Array<{achievementId: string; tierId: string}> = [];
+
+  for (const achievement of resolvedDefinitions) {
+    const current = metrics[achievement.metric] ?? 0;
+    const record = records.get(achievement.id);
+    const tiersPayload: Record<string, {unlockedAt: unknown}> = {};
+    let highestUnlockedTier = Number(record?.highestUnlockedTier ?? -1);
+
+    achievement.tiers.forEach((tier, index) => {
+      const alreadyUnlocked =
+        Boolean(record?.tiers?.[tier.id]?.unlockedAt) ||
+        highestUnlockedTier >= index;
+
+      if (current < tier.target || alreadyUnlocked) {
+        return;
+      }
+
+      tiersPayload[tier.id] = {unlockedAt: FieldValue.serverTimestamp()};
+      highestUnlockedTier = Math.max(highestUnlockedTier, index);
+      unlocked.push({achievementId: achievement.id, tierId: tier.id});
+    });
+
+    if (!Object.keys(tiersPayload).length) {
+      continue;
+    }
+
+    batch.set(
+      db.collection("users").doc(userId)
+        .collection("achievements").doc(achievement.id),
+      {
+        achievementId: achievement.id,
+        highestUnlockedTier,
+        highestClaimedTier: Number(record?.highestClaimedTier ?? -1),
+        tiers: tiersPayload,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      {merge: true}
+    );
+  }
+
+  if (unlocked.length > 0) {
+    await batch.commit();
+  }
+
+  return {
+    unlocked,
+    unlockedCount: unlocked.length,
+    metrics,
+  };
+}
+
+async function claimAchievementRewardForUser(
+  userId: string,
+  input: ClaimAchievementInput
+) {
+  const definitions = await getAchievementDefinitions(db);
+
+  await syncAchievementsForUser(userId, definitions);
+
+  const achievementId = asString(input.achievementId, "achievementId");
+  const tierId = asString(input.tierId, "tierId");
+  const achievement = definitions.find((item) => item.id === achievementId);
+
+  if (!achievement) {
+    throw new HttpsError("not-found", "Achievement definition not found.");
+  }
+
+  const tierIndex = achievement.tiers.findIndex((tier) => tier.id === tierId);
+  const tier = achievement.tiers[tierIndex];
+
+  if (!tier || tierIndex < 0) {
+    throw new HttpsError("not-found", "Achievement tier not found.");
+  }
+
+  return db.runTransaction(async (transaction) => {
+    const userRef = db.collection("users").doc(userId);
+    const achievementRef = userRef.collection("achievements")
+      .doc(achievementId);
+    const [userSnapshot, achievementSnapshot] = await Promise.all([
+      transaction.get(userRef),
+      transaction.get(achievementRef),
+    ]);
+
+    if (!userSnapshot.exists) {
+      throw new HttpsError("not-found", "User profile not found.");
+    }
+
+    if (!achievementSnapshot.exists) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Achievement is not unlocked yet."
+      );
+    }
+
+    const record = achievementSnapshot.data() as AchievementRecord;
+    const tiers = record.tiers ?? {};
+    const requestedTier = tiers[tierId];
+
+    if (!requestedTier?.unlockedAt) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Tier is not unlocked yet."
+      );
+    }
+
+    if (requestedTier.claimedAt) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Reward already claimed."
+      );
+    }
+
+    const firstUnclaimedTier = achievement.tiers.find((item) =>
+      tiers[item.id]?.unlockedAt && !tiers[item.id]?.claimedAt
+    );
+
+    if (firstUnclaimedTier?.id !== tierId) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Claim previous unlocked tier first."
+      );
+    }
+
+    const userData = userSnapshot.data() ?? {};
+    const currentCoins = Number(userData.coins ?? 0);
+    const currentExp = Number(userData.exp ?? 0);
+    const nextCoins = Math.max(0, currentCoins + tier.rewardCoins);
+    const nextExp = Math.max(0, currentExp + Number(tier.rewardExp ?? 0));
+    const nextLevel = getLevelFromExp(nextExp);
+
+    transaction.set(achievementRef, {
+      highestClaimedTier: Math.max(
+        Number(record.highestClaimedTier ?? -1),
+        tierIndex
+      ),
+      tiers: {
+        [tierId]: {
+          unlockedAt: requestedTier.unlockedAt,
+          claimedAt: FieldValue.serverTimestamp(),
+        },
+      },
+      updatedAt: FieldValue.serverTimestamp(),
+    }, {merge: true});
+
+    transaction.update(userRef, {
+      coins: nextCoins,
+      exp: nextExp,
+      level: nextLevel,
+    });
+
+    return {
+      achievementId,
+      tierId,
+      rewardCoins: tier.rewardCoins,
+      rewardExp: Number(tier.rewardExp ?? 0),
+      coins: nextCoins,
+      exp: nextExp,
+      level: nextLevel,
+    };
+  });
 }
 
 function toMillis(value: unknown): number | null {
@@ -765,15 +1095,50 @@ async function recordChronicleQuizAttemptForUser(
   const attemptNumber = attemptsUsed + 1;
   const batch = db.batch();
   const affectedFragmentIds = new Set<string>();
+  const sourceQuestionIds = questions.map((question) =>
+    question.sourceQuestionId ?? question.id
+  );
+  const [userSnapshot, previousStatsSnapshots] = await Promise.all([
+    db.collection("users").doc(userId).get(),
+    Promise.all(sourceQuestionIds.map((questionId) =>
+      db.collection("userQuestionStats").doc(`${userId}_${questionId}`).get()
+    )),
+  ]);
+  const previousStatsByQuestionId = new Map(
+    previousStatsSnapshots.map((snapshot) => [snapshot.id, snapshot.data()])
+  );
+  const userData = userSnapshot.data() ?? {};
+  const userStats = typeof userData.stats === "object" &&
+    userData.stats !== null ?
+    userData.stats as Record<string, unknown> :
+    {};
+  let currentCorrectStreak = Number(
+    userStats.currentCorrectStreak ?? userData.currentCorrectStreak ?? 0
+  );
+  let bestCorrectStreak = Number(
+    userStats.bestCorrectStreak ?? userData.bestCorrectStreak ?? 0
+  );
+  let fixedMistakes = 0;
   let correctCount = 0;
 
   for (const question of questions) {
     const questionId = question.sourceQuestionId ?? question.id;
     const userAnswer = answers[question.id] ?? answers[questionId];
     const correct = isCorrectAnswer(question, userAnswer);
+    const previousStats = previousStatsByQuestionId.get(
+      `${userId}_${questionId}`
+    );
 
     if (correct) {
       correctCount += 1;
+      currentCorrectStreak += 1;
+      bestCorrectStreak = Math.max(bestCorrectStreak, currentCorrectStreak);
+
+      if (previousStats?.lastCorrect === false) {
+        fixedMistakes += 1;
+      }
+    } else {
+      currentCorrectStreak = 0;
     }
 
     const linkedFragmentIds = question.linkedFragmentIds?.length ?
@@ -819,6 +1184,17 @@ async function recordChronicleQuizAttemptForUser(
       }, {merge: true});
     }
   }
+
+  batch.set(db.collection("users").doc(userId), {
+    stats: {
+      currentCorrectStreak,
+      bestCorrectStreak,
+      mistakesFixed: FieldValue.increment(fixedMistakes),
+    },
+    currentCorrectStreak,
+    bestCorrectStreak,
+    mistakesFixed: FieldValue.increment(fixedMistakes),
+  }, {merge: true});
 
   const percentage = Math.round((correctCount / questions.length) * 100);
   const bestScore = Math.max(Number(progress.bestScore ?? 0), percentage);
@@ -900,6 +1276,36 @@ export const recordChronicleQuizAttemptHttp = onRequest(
       request,
       response,
       handler: recordChronicleQuizAttemptForUser,
+    });
+  }
+);
+
+export const syncAchievementsHttp = onRequest(
+  {
+    invoker: "public",
+    maxInstances: 5,
+  },
+  async (request, response) => {
+    await handleHttpFunction<Record<string, never>, unknown>({
+      request,
+      response,
+      requireTesterAccess: false,
+      handler: (userId) => syncAchievementsForUser(userId),
+    });
+  }
+);
+
+export const claimAchievementRewardHttp = onRequest(
+  {
+    invoker: "public",
+    maxInstances: 5,
+  },
+  async (request, response) => {
+    await handleHttpFunction<ClaimAchievementInput, unknown>({
+      request,
+      response,
+      requireTesterAccess: false,
+      handler: claimAchievementRewardForUser,
     });
   }
 );

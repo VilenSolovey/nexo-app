@@ -65,6 +65,15 @@ export async function getCurrentUser(userId: string): Promise<UserProfile | null
     streak: Number((raw as any).streak ?? 0),
     lastActiveDate: typeof (raw as any).lastActiveDate === "string" ? (raw as any).lastActiveDate : undefined,
     longestStreak: Number((raw as any).longestStreak ?? 0),
+    stats:
+      typeof (raw as any).stats === "object" && (raw as any).stats !== null
+        ? {
+            mistakesFixed: Number((raw as any).stats.mistakesFixed ?? 0),
+            bestCorrectStreak: Number((raw as any).stats.bestCorrectStreak ?? 0),
+          }
+        : undefined,
+    mistakesFixed: Number((raw as any).mistakesFixed ?? (raw as any).stats?.mistakesFixed ?? 0),
+    bestCorrectStreak: Number((raw as any).bestCorrectStreak ?? (raw as any).stats?.bestCorrectStreak ?? 0),
     achievements: Array.isArray((raw as any).achievements) ? (raw as any).achievements.map(String) : [],
     inventory: Array.isArray((raw as any).inventory) ? (raw as any).inventory.map(String) : [],
     selectedThemeId:
@@ -107,6 +116,15 @@ export function listenUser(userId: string, cb: (u: UserProfile | null) => void) 
       streak: Number((raw as any).streak ?? 0),
       lastActiveDate: typeof (raw as any).lastActiveDate === "string" ? (raw as any).lastActiveDate : undefined,
       longestStreak: Number((raw as any).longestStreak ?? 0),
+      stats:
+        typeof (raw as any).stats === "object" && (raw as any).stats !== null
+          ? {
+              mistakesFixed: Number((raw as any).stats.mistakesFixed ?? 0),
+              bestCorrectStreak: Number((raw as any).stats.bestCorrectStreak ?? 0),
+            }
+          : undefined,
+      mistakesFixed: Number((raw as any).mistakesFixed ?? (raw as any).stats?.mistakesFixed ?? 0),
+      bestCorrectStreak: Number((raw as any).bestCorrectStreak ?? (raw as any).stats?.bestCorrectStreak ?? 0),
       achievements: Array.isArray((raw as any).achievements) ? (raw as any).achievements.map(String) : [],
       inventory: Array.isArray((raw as any).inventory) ? (raw as any).inventory.map(String) : [],
       selectedThemeId:

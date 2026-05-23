@@ -3,18 +3,19 @@ export type AchievementCategory =
   | 'skill'
   | 'streak'
   | 'mastery'
-  | 'economy'
+  | 'chronicle'
 
 export type AchievementMetric =
   | 'uniqueQuizzes'
-  | 'passedQuizzes'
   | 'perfectScores'
-  | 'bestScore'
   | 'streakDays'
-  | 'masteredQuizzes'
   | 'level'
-  | 'coins'
-  | 'fastPasses'
+  | 'completedChronicles'
+  | 'unlockedFragments'
+  | 'mistakesFixed'
+  | 'bestCorrectStreak'
+  | 'masteredChronicles'
+  | 'perfectChallenges'
 
 export interface AchievementTierDefinition {
   id: string
@@ -32,6 +33,8 @@ export interface AchievementDefinition {
   metric: AchievementMetric
   icon: string
   accentColor?: string
+  order?: number
+  active?: boolean
   tiers: AchievementTierDefinition[]
 }
 
