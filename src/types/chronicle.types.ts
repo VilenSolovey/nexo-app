@@ -94,6 +94,7 @@ export type QuizRun = {
 }
 
 export type UserQuestionStats = {
+  id?: string
   userId: string
   questionId: string
   chapterId: string

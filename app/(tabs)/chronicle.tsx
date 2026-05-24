@@ -15,6 +15,7 @@ import {
   getUserChapterProgressList,
   getUserChallengeProgressList,
   getUserFragmentProgressList,
+  getUserQuestionStatsList,
 } from '@nexo/services/chronicle.service'
 import { createChronicleChallengeQuiz } from '@nexo/services/chronicle-quiz.service'
 import type {
@@ -24,6 +25,7 @@ import type {
   UserChapterProgress,
   UserChallengeProgress,
   UserFragmentProgress,
+  UserQuestionStats,
 } from '@nexo/types/chronicle.types'
 import {
   ChallengeBody,
@@ -132,6 +134,7 @@ export default function ChronicleScreen() {
   const [fragments, setFragments] = useState<ChronicleFragment[]>([])
   const [slots, setSlots] = useState<ChallengeSlot[]>([])
   const [progressList, setProgressList] = useState<UserFragmentProgress[]>([])
+  const [questionStatsList, setQuestionStatsList] = useState<UserQuestionStats[]>([])
   const [challengeProgressList, setChallengeProgressList] = useState<UserChallengeProgress[]>([])
   const [chapterProgress, setChapterProgress] = useState<UserChapterProgress | null>(null)
   const [loading, setLoading] = useState(true)
@@ -153,13 +156,37 @@ export default function ChronicleScreen() {
 
   const masteredCount = progressList.filter((progress) => progress.mastered).length
   const unlockedCount = progressList.filter((progress) => progress.unlocked).length
-  const answeredCount = progressList.reduce((sum, progress) => sum + Number(progress.answered ?? 0), 0)
-  const correctCount = progressList.reduce((sum, progress) => sum + Number(progress.correct ?? 0), 0)
+  const fragmentAnsweredCount = progressList.reduce(
+    (sum, progress) => sum + Number(progress.answered ?? 0),
+    0,
+  )
+  const fragmentCorrectCount = progressList.reduce(
+    (sum, progress) => sum + Number(progress.correct ?? 0),
+    0,
+  )
+  const questionAnsweredCount = questionStatsList.reduce(
+    (sum, stats) => sum + Number(stats.attempts ?? 0),
+    0,
+  )
+  const questionCorrectCount = questionStatsList.reduce(
+    (sum, stats) => sum + Number(stats.correct ?? 0),
+    0,
+  )
+  const hasQuestionStats = questionStatsList.length > 0
+  const answeredCount = hasQuestionStats
+    ? questionAnsweredCount
+    : Number(chapterProgress?.answered ?? fragmentAnsweredCount)
+  const correctCount = hasQuestionStats
+    ? questionCorrectCount
+    : Number(chapterProgress?.correct ?? fragmentCorrectCount)
   const requiredUnlocked = chapter?.trialUnlockRule.requiredUnlockedFragments ?? 0
   const requiredMastered = chapter?.trialUnlockRule.requiredMasteredFragments ?? 0
   const requiredAnswered = chapter?.trialUnlockRule.minAnsweredQuestions ?? 0
   const requiredAccuracy = chapter?.trialUnlockRule.minAccuracyPercent ?? 0
-  const accuracyPercent = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0
+  const accuracyPercent = Number(
+    chapterProgress?.accuracyPercent ??
+    (answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0),
+  )
   const unlockedRequirementMet = requiredUnlocked <= 0 || unlockedCount >= requiredUnlocked
   const masteredRequirementMet = requiredMastered <= 0 || masteredCount >= requiredMastered
   const trialReady =
@@ -245,6 +272,7 @@ export default function ChronicleScreen() {
         setFragments([])
         setSlots([])
         setProgressList([])
+        setQuestionStatsList([])
         setChallengeProgressList([])
         setChapterProgress(null)
         return
@@ -254,12 +282,14 @@ export default function ChronicleScreen() {
         nextFragments,
         nextSlots,
         nextProgress,
+        nextQuestionStats,
         nextChallengeProgress,
         nextChapterProgress,
       ] = await Promise.all([
         getChapterFragments(nextChapter.id),
         getChapterChallengeSlots(nextChapter.id),
         userId ? getUserFragmentProgressList(userId, nextChapter.id) : Promise.resolve([]),
+        userId ? getUserQuestionStatsList(userId, nextChapter.id).catch(() => []) : Promise.resolve([]),
         userId
           ? getUserChallengeProgressList(userId, nextChapter.id).catch(() => [])
           : Promise.resolve([]),
@@ -271,6 +301,7 @@ export default function ChronicleScreen() {
       setFragments(nextFragments)
       setSlots(nextSlots)
       setProgressList(nextProgress)
+      setQuestionStatsList(nextQuestionStats)
       setChallengeProgressList(nextChallengeProgress)
       setChapterProgress(nextChapterProgress)
     } catch (loadError: any) {

@@ -1,5 +1,17 @@
 import { Timestamp } from "firebase/firestore"
 
+export type QuizAnswerDetail = {
+  questionId: string
+  questionText: string
+  type: string
+  userAnswer: unknown
+  correctAnswer: unknown
+  correct: boolean
+  answered: boolean
+  options: string[] | null
+  explanation: string | null
+}
+
 export type QuizResult = {
   id: string
   userId: string
@@ -16,6 +28,8 @@ export type QuizResult = {
   leftAppDuringQuiz?: boolean
   backgroundCount?: number
   backgroundDurationMs?: number
+  answers?: Record<string, unknown> | null
+  answerDetails?: QuizAnswerDetail[] | null
 }
 
 export type UserQuizProgress = {

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { Modal, Pressable } from "react-native"
-import * as Haptics from "expo-haptics"
+import { Modal, Pressable, ScrollView, useWindowDimensions } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import type { DailyMiniGameResult, MiniGameDefinition } from "@nexo/utils/daily-mini-game"
 import {
@@ -9,11 +8,6 @@ import {
 } from "@nexo/utils/daily-mini-game"
 import {
   FooterActions,
-  GameHint,
-  GameOption,
-  GameOptionEmoji,
-  GameOptionText,
-  GamePanel,
   Handle,
   ModalHeader,
   ModalHeaderCopy,
@@ -22,24 +16,17 @@ import {
   ModalSheet,
   ModalSubtitle,
   ModalTitle,
-  OptionRow,
-  PrimaryAction,
-  PrimaryActionText,
-  ResultCard,
-  ResultLabel,
-  ResultSubText,
-  ResultText,
-  RewardValue,
-  ScoreCard,
-  ScoreCardLabel,
-  ScoreCardValue,
-  ScoreDivider,
-  ScoreRow,
   SecondaryAction,
   SecondaryActionText,
-  SelectionPreview,
-  SelectionPreviewText,
 } from "@nexo/components/Home/MiniGameOfDay/MiniGameOfDay.styled"
+import { CoinFlipGame } from "@nexo/components/Home/MiniGameOfDay/games/CoinFlipGame"
+import { LuckyWheelGame } from "@nexo/components/Home/MiniGameOfDay/games/LuckyWheelGame"
+import { MemorySequenceGame } from "@nexo/components/Home/MiniGameOfDay/games/MemorySequenceGame"
+import { MinePickGame } from "@nexo/components/Home/MiniGameOfDay/games/MinePickGame"
+import { RockPaperScissorsGame } from "@nexo/components/Home/MiniGameOfDay/games/RockPaperScissorsGame"
+import { TimingLockGame } from "@nexo/components/Home/MiniGameOfDay/games/TimingLockGame"
+import { TwentyOneGame } from "@nexo/components/Home/MiniGameOfDay/games/TwentyOneGame"
+import type { ApplyPointParams, MiniGameFinishPayload, MiniGamePlayProps } from "./games/shared"
 
 type Props = {
   visible: boolean
@@ -49,124 +36,77 @@ type Props = {
   onFinish: (result: MiniGameFinishPayload) => void | Promise<void>
 }
 
-export type MiniGameFinishPayload = {
-  summary: string
-  won: boolean
-  rewardCoins: number
-  playerScore: number
-  opponentScore: number
-}
+export type { MiniGameFinishPayload } from "./games/shared"
 
-type CoinSide = "heads" | "tails"
-type RpsChoice = "rock" | "scissors" | "paper"
-type WheelSymbol = "clover" | "star" | "fire"
-
-const coinSides: Array<{ id: CoinSide; emoji: string; label: string }> = [
-  { id: "heads", emoji: "🦅", label: "Орел" },
-  { id: "tails", emoji: "🪙", label: "Решка" },
-]
-
-const rpsChoicesData: Array<{ id: RpsChoice; emoji: string; label: string }> = [
-  { id: "rock", emoji: "🪨", label: "Камінь" },
-  { id: "scissors", emoji: "✂️", label: "Ножиці" },
-  { id: "paper", emoji: "📄", label: "Папір" },
-]
-
-const wheelSymbols: Array<{ id: WheelSymbol; emoji: string; label: string }> = [
-  { id: "clover", emoji: "🍀", label: "Фарт" },
-  { id: "star", emoji: "⭐", label: "Зірка" },
-  { id: "fire", emoji: "🔥", label: "Іскра" },
-]
-
-function pickRandomItem<T>(items: T[]) {
-  return items[Math.floor(Math.random() * items.length)]
-}
-
-function resolveRpsResult(player: RpsChoice, opponent: RpsChoice) {
-  if (player === opponent) {
-    return "draw" as const
-  }
-
-  const winsAgainst: Record<RpsChoice, RpsChoice> = {
-    rock: "scissors",
-    scissors: "paper",
-    paper: "rock",
-  }
-
-  return winsAgainst[player] === opponent ? "win" as const : "loss" as const
-}
-
-function getCoinSideMeta(side: CoinSide) {
-  return coinSides.find((item) => item.id === side) ?? coinSides[0]
-}
-
-function getRpsMeta(choice: RpsChoice) {
-  return rpsChoicesData.find((item) => item.id === choice) ?? rpsChoicesData[0]
-}
-
-function getWheelMeta(symbol: WheelSymbol) {
-  return wheelSymbols.find((item) => item.id === symbol) ?? wheelSymbols[0]
-}
-
-export function MiniGameModal({ visible, game, existingResult, onClose, onFinish }: Props) {
-  const [coinPrediction, setCoinPrediction] = useState<CoinSide | null>(null)
-  const [wheelPrediction, setWheelPrediction] = useState<WheelSymbol | null>(null)
-  const [playerScore, setPlayerScore] = useState(0)
-  const [opponentScore, setOpponentScore] = useState(0)
-  const [roundSummary, setRoundSummary] = useState<string | null>(null)
-  const [roundDetails, setRoundDetails] = useState<string | null>(null)
-  const [rpsChoices, setRpsChoices] = useState<{ player: RpsChoice; opponent: RpsChoice } | null>(null)
-  const [coinReveal, setCoinReveal] = useState<CoinSide | null>(null)
-  const [wheelReveal, setWheelReveal] = useState<WheelSymbol | null>(null)
-  const [completedResult, setCompletedResult] = useState<MiniGameFinishPayload | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
-
-  useEffect(() => {
-    if (!visible) {
-      return
-    }
-
-    setCoinPrediction(null)
-    setWheelPrediction(null)
-    setPlayerScore(0)
-    setOpponentScore(0)
-    setRoundSummary(null)
-    setRoundDetails(null)
-    setRpsChoices(null)
-    setCoinReveal(null)
-    setWheelReveal(null)
-    setCompletedResult(null)
-    setIsSaving(false)
-  }, [game.id, visible])
-
-  const lockedResult = completedResult ?? (existingResult
+function getLockedResult(
+  completedResult: MiniGameFinishPayload | null,
+  existingResult: DailyMiniGameResult | null,
+) {
+  return completedResult ?? (existingResult
     ? {
         summary: existingResult.summary,
         won: existingResult.won,
         rewardCoins: existingResult.rewardCoins,
-        playerScore: existingResult.playerScore,
-        opponentScore: existingResult.opponentScore,
+        progressScore: existingResult.progressScore,
+        riskScore: existingResult.riskScore,
       }
     : null)
+}
 
+export function MiniGameModal({ visible, game, existingResult, onClose, onFinish }: Props) {
+  const { height } = useWindowDimensions()
+  const [progress, setProgress] = useState(0)
+  const [risk, setRisk] = useState(0)
+  const [roundSummary, setRoundSummary] = useState<string | null>(null)
+  const [roundDetails, setRoundDetails] = useState<string | null>(null)
+  const [completedResult, setCompletedResult] = useState<MiniGameFinishPayload | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [resetKey, setResetKey] = useState(0)
+
+  const lockedResult = getLockedResult(completedResult, existingResult)
   const isLocked = Boolean(existingResult)
   const isCompleted = Boolean(lockedResult)
+  const contentMaxHeight = Math.max(340, height * 0.58)
 
-  const finalizeSeries = async (
-    nextPlayerScore: number,
-    nextOpponentScore: number,
-    summary: string,
-  ) => {
-    const won = nextPlayerScore > nextOpponentScore
-    const rewardCoins = getMiniGameRewardCoins(won)
-    const result: MiniGameFinishPayload = {
-      summary,
-      won,
-      rewardCoins,
-      playerScore: nextPlayerScore,
-      opponentScore: nextOpponentScore,
+  const resetChallenge = () => {
+    setProgress(0)
+    setRisk(0)
+    setRoundSummary(null)
+    setRoundDetails(null)
+    setCompletedResult(null)
+    setIsSaving(false)
+    setResetKey((value) => value + 1)
+  }
+
+  useEffect(() => {
+    if (visible) {
+      setProgress(0)
+      setRisk(0)
+      setRoundSummary(null)
+      setRoundDetails(null)
+      setCompletedResult(null)
+      setIsSaving(false)
+      setResetKey((value) => value + 1)
     }
+  }, [game.id, visible])
 
+  const setScore = (nextProgress: number, nextRisk: number) => {
+    setProgress(nextProgress)
+    setRisk(nextRisk)
+  }
+
+  const setRoundFeedback = (summary: string | null, details: string | null = null) => {
+    setRoundSummary(summary)
+    setRoundDetails(details)
+  }
+
+  const clearRoundFeedback = () => {
+    setRoundFeedback(null, null)
+  }
+
+  const completeChallenge = async (result: MiniGameFinishPayload) => {
+    setProgress(result.progressScore)
+    setRisk(result.riskScore)
     setCompletedResult(result)
     setIsSaving(true)
 
@@ -177,263 +117,66 @@ export function MiniGameModal({ visible, game, existingResult, onClose, onFinish
     }
   }
 
-  const applySeriesPoint = async (params: {
-    playerWon: boolean
-    roundSummary: string
-    roundDetails?: string | null
-  }) => {
-    const { playerWon, roundSummary: nextRoundSummary, roundDetails: nextRoundDetails } = params
-    const nextPlayerScore = playerScore + (playerWon ? 1 : 0)
-    const nextOpponentScore = opponentScore + (playerWon ? 0 : 1)
+  const applyPoint = async (params: ApplyPointParams) => {
+    const nextProgress = progress + (params.playerWon ? 1 : 0)
+    const nextRisk = risk + (params.playerWon ? 0 : 1)
 
-    setPlayerScore(nextPlayerScore)
-    setOpponentScore(nextOpponentScore)
-    setRoundSummary(nextRoundSummary)
-    setRoundDetails(nextRoundDetails ?? null)
+    setProgress(nextProgress)
+    setRisk(nextRisk)
+    setRoundFeedback(params.roundSummary, params.roundDetails ?? null)
 
     if (
-      nextPlayerScore >= MINI_GAME_TARGET_SCORE ||
-      nextOpponentScore >= MINI_GAME_TARGET_SCORE
+      nextProgress >= MINI_GAME_TARGET_SCORE ||
+      nextRisk >= MINI_GAME_TARGET_SCORE
     ) {
-      const finalSummary = playerWon
-        ? `Серія закрита ${nextPlayerScore}:${nextOpponentScore} на твою користь`
-        : `Серія закрита ${nextPlayerScore}:${nextOpponentScore}, але завтра буде реванш`
-
-      await finalizeSeries(nextPlayerScore, nextOpponentScore, finalSummary)
+      await completeChallenge({
+        summary: params.playerWon
+          ? `Челендж завершено: ${nextProgress}/${MINI_GAME_TARGET_SCORE}`
+          : `Спроба завершена: ${nextRisk}/${MINI_GAME_TARGET_SCORE} помилок`,
+        won: nextProgress > nextRisk,
+        rewardCoins: getMiniGameRewardCoins(nextProgress > nextRisk),
+        progressScore: nextProgress,
+        riskScore: nextRisk,
+      })
     }
   }
 
-  const handleFlipCoin = async () => {
-    if (!coinPrediction || isCompleted) {
-      return
-    }
-
-    const result = pickRandomItem<CoinSide>(["heads", "tails"])
-    const playerWon = result === coinPrediction
-    const picked = getCoinSideMeta(coinPrediction)
-    const landed = getCoinSideMeta(result)
-
-    setCoinReveal(result)
-
-    await Haptics.notificationAsync(
-      playerWon ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning,
-    )
-
-    await applySeriesPoint({
-      playerWon,
-      roundSummary: playerWon ? `Влучив у ${landed.emoji}` : `Монетка пішла в ${landed.emoji}`,
-      roundDetails: `Твій вибір: ${picked.emoji} ${picked.label} • Випало: ${landed.emoji} ${landed.label}`,
-    })
+  const gameProps: MiniGamePlayProps = {
+    game,
+    progress,
+    risk,
+    lockedResult,
+    isCompleted,
+    roundSummary,
+    roundDetails,
+    resetKey,
+    onPoint: applyPoint,
+    onComplete: completeChallenge,
+    setScore,
+    setRoundFeedback,
+    clearRoundFeedback,
   }
 
-  const handleRpsPick = async (player: RpsChoice) => {
-    if (isCompleted) {
-      return
+  const renderGame = () => {
+    switch (game.id) {
+      case "blackjack":
+        return <TwentyOneGame {...gameProps} />
+      case "coin_flip":
+        return <CoinFlipGame {...gameProps} />
+      case "lucky_wheel":
+        return <LuckyWheelGame {...gameProps} />
+      case "memory_sequence":
+        return <MemorySequenceGame {...gameProps} />
+      case "mine_pick":
+        return <MinePickGame {...gameProps} />
+      case "rock_paper_scissors":
+        return <RockPaperScissorsGame {...gameProps} />
+      case "timing_lock":
+        return <TimingLockGame {...gameProps} />
+      default:
+        return null
     }
-
-    const opponent = pickRandomItem<RpsChoice>(["rock", "scissors", "paper"])
-    const outcome = resolveRpsResult(player, opponent)
-    const playerMeta = getRpsMeta(player)
-    const opponentMeta = getRpsMeta(opponent)
-
-    setRpsChoices({ player, opponent })
-
-    if (outcome === "draw") {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-      setRoundSummary("Нічия, рахунок без змін")
-      setRoundDetails(`${playerMeta.emoji} ${playerMeta.label} проти ${opponentMeta.emoji} ${opponentMeta.label}`)
-      return
-    }
-
-    await Haptics.notificationAsync(
-      outcome === "win"
-        ? Haptics.NotificationFeedbackType.Success
-        : Haptics.NotificationFeedbackType.Error,
-    )
-
-    await applySeriesPoint({
-      playerWon: outcome === "win",
-      roundSummary:
-        outcome === "win"
-          ? `${playerMeta.emoji} перемагає раунд`
-          : `${opponentMeta.emoji} забирає раунд`,
-      roundDetails: `${playerMeta.emoji} ${playerMeta.label} проти ${opponentMeta.emoji} ${opponentMeta.label}`,
-    })
   }
-
-  const handleSpinWheel = async () => {
-    if (!wheelPrediction || isCompleted) {
-      return
-    }
-
-    const result = pickRandomItem<WheelSymbol>(["clover", "star", "fire"])
-    const playerWon = result === wheelPrediction
-    const picked = getWheelMeta(wheelPrediction)
-    const landed = getWheelMeta(result)
-
-    setWheelReveal(result)
-
-    await Haptics.notificationAsync(
-      playerWon ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning,
-    )
-
-    await applySeriesPoint({
-      playerWon,
-      roundSummary: playerWon ? `${landed.emoji} колесо на твоєму боці` : `${landed.emoji} цього разу не збіглося`,
-      roundDetails: `Ти вибрав: ${picked.emoji} ${picked.label} • Випало: ${landed.emoji} ${landed.label}`,
-    })
-  }
-
-  const renderScore = () => (
-    <ScoreRow>
-      <ScoreCard>
-        <ScoreCardLabel>Ти</ScoreCardLabel>
-        <ScoreCardValue>{lockedResult?.playerScore ?? playerScore}</ScoreCardValue>
-      </ScoreCard>
-
-      <ScoreDivider>до {MINI_GAME_TARGET_SCORE}</ScoreDivider>
-
-      <ScoreCard>
-        <ScoreCardLabel>Суперник</ScoreCardLabel>
-        <ScoreCardValue>{lockedResult?.opponentScore ?? opponentScore}</ScoreCardValue>
-      </ScoreCard>
-    </ScoreRow>
-  )
-
-  const renderCoinFlip = () => (
-    <GamePanel>
-      <GameHint>Обери сторону монетки. Кожне влучання дає очко, промах додає очко супернику.</GameHint>
-      {renderScore()}
-
-      <OptionRow>
-        {coinSides.map((side) => (
-          <GameOption
-            key={side.id}
-            $accent={game.accent}
-            $active={coinPrediction === side.id}
-            disabled={isCompleted}
-            onPress={() => setCoinPrediction(side.id)}
-          >
-            <GameOptionEmoji>{side.emoji}</GameOptionEmoji>
-            <GameOptionText $active={coinPrediction === side.id}>{side.label}</GameOptionText>
-          </GameOption>
-        ))}
-      </OptionRow>
-
-      {coinPrediction ? (
-        <SelectionPreview $accent={game.accent}>
-          <SelectionPreviewText>
-            Ставка: {getCoinSideMeta(coinPrediction).emoji} {getCoinSideMeta(coinPrediction).label}
-          </SelectionPreviewText>
-        </SelectionPreview>
-      ) : null}
-
-      {!isCompleted ? (
-        <PrimaryAction $accent={game.accent} $disabled={!coinPrediction} disabled={!coinPrediction} onPress={handleFlipCoin}>
-          <PrimaryActionText>Кинути монетку</PrimaryActionText>
-        </PrimaryAction>
-      ) : null}
-
-      {coinReveal || roundSummary || lockedResult ? (
-        <ResultCard $accent={game.accent}>
-          <ResultLabel>{isCompleted ? "ФІНАЛ СЕРІЇ" : "ОСТАННІЙ РАУНД"}</ResultLabel>
-          <ResultText>{roundSummary ?? lockedResult?.summary}</ResultText>
-          {roundDetails ? <ResultSubText>{roundDetails}</ResultSubText> : null}
-          {lockedResult ? <RewardValue>+{lockedResult.rewardCoins} монет</RewardValue> : null}
-        </ResultCard>
-      ) : null}
-    </GamePanel>
-  )
-
-  const renderRockPaperScissors = () => (
-    <GamePanel>
-      <GameHint>Нічия не змінює рахунок. Потрібно першим узяти 3 раунди.</GameHint>
-      {renderScore()}
-
-      <OptionRow>
-        {rpsChoicesData.map((choice) => (
-          <GameOption
-            key={choice.id}
-            $accent={game.accent}
-            disabled={isCompleted}
-            onPress={() => handleRpsPick(choice.id)}
-          >
-            <GameOptionEmoji>{choice.emoji}</GameOptionEmoji>
-            <GameOptionText>{choice.label}</GameOptionText>
-          </GameOption>
-        ))}
-      </OptionRow>
-
-      {rpsChoices ? (
-        <SelectionPreview $accent={game.accent}>
-          <SelectionPreviewText>
-            {getRpsMeta(rpsChoices.player).emoji} vs {getRpsMeta(rpsChoices.opponent).emoji}
-          </SelectionPreviewText>
-        </SelectionPreview>
-      ) : null}
-
-      {roundSummary || lockedResult ? (
-        <ResultCard $accent={game.accent}>
-          <ResultLabel>{isCompleted ? "ФІНАЛ СЕРІЇ" : "ОСТАННІЙ РАУНД"}</ResultLabel>
-          <ResultText>{roundSummary ?? lockedResult?.summary}</ResultText>
-          {roundDetails ? <ResultSubText>{roundDetails}</ResultSubText> : null}
-          {lockedResult ? <RewardValue>+{lockedResult.rewardCoins} монет</RewardValue> : null}
-        </ResultCard>
-      ) : null}
-    </GamePanel>
-  )
-
-  const renderLuckyWheel = () => (
-    <GamePanel>
-      <GameHint>Вибери символ удачі. Якщо колесо зупиниться на ньому, очко твоє.</GameHint>
-      {renderScore()}
-
-      <OptionRow>
-        {wheelSymbols.map((symbol) => (
-          <GameOption
-            key={symbol.id}
-            $accent={game.accent}
-            $active={wheelPrediction === symbol.id}
-            disabled={isCompleted}
-            onPress={() => setWheelPrediction(symbol.id)}
-          >
-            <GameOptionEmoji>{symbol.emoji}</GameOptionEmoji>
-            <GameOptionText $active={wheelPrediction === symbol.id}>{symbol.label}</GameOptionText>
-          </GameOption>
-        ))}
-      </OptionRow>
-
-      {wheelPrediction ? (
-        <SelectionPreview $accent={game.accent}>
-          <SelectionPreviewText>
-            Ціль: {getWheelMeta(wheelPrediction).emoji} {getWheelMeta(wheelPrediction).label}
-          </SelectionPreviewText>
-        </SelectionPreview>
-      ) : null}
-
-      {!isCompleted ? (
-        <PrimaryAction $accent={game.accent} $disabled={!wheelPrediction} disabled={!wheelPrediction} onPress={handleSpinWheel}>
-          <PrimaryActionText>Крутити колесо</PrimaryActionText>
-        </PrimaryAction>
-      ) : null}
-
-      {wheelReveal || roundSummary || lockedResult ? (
-        <ResultCard $accent={game.accent}>
-          <ResultLabel>{isCompleted ? "ФІНАЛ СЕРІЇ" : "ОСТАННІЙ РАУНД"}</ResultLabel>
-          <ResultText>{roundSummary ?? lockedResult?.summary}</ResultText>
-          {roundDetails ? <ResultSubText>{roundDetails}</ResultSubText> : null}
-          {lockedResult ? <RewardValue>+{lockedResult.rewardCoins} монет</RewardValue> : null}
-        </ResultCard>
-      ) : null}
-    </GamePanel>
-  )
-
-  const content =
-    game.id === "coin_flip"
-      ? renderCoinFlip()
-      : game.id === "rock_paper_scissors"
-        ? renderRockPaperScissors()
-        : renderLuckyWheel()
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -454,7 +197,13 @@ export function MiniGameModal({ visible, game, existingResult, onClose, onFinish
             </ModalHeaderCopy>
           </ModalHeader>
 
-          {content}
+          <ScrollView
+            style={{ maxHeight: contentMaxHeight }}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {renderGame()}
+          </ScrollView>
 
           <FooterActions>
             <SecondaryAction onPress={onClose}>
@@ -462,25 +211,13 @@ export function MiniGameModal({ visible, game, existingResult, onClose, onFinish
             </SecondaryAction>
 
             {!isLocked && !isCompleted ? (
-              <SecondaryAction
-                onPress={() => {
-                  setCoinPrediction(null)
-                  setWheelPrediction(null)
-                  setPlayerScore(0)
-                  setOpponentScore(0)
-                  setRoundSummary(null)
-                  setRoundDetails(null)
-                  setRpsChoices(null)
-                  setCoinReveal(null)
-                  setWheelReveal(null)
-                }}
-              >
+              <SecondaryAction onPress={resetChallenge}>
                 <SecondaryActionText>Почати заново</SecondaryActionText>
               </SecondaryAction>
             ) : (
               <SecondaryAction disabled={isSaving}>
                 <SecondaryActionText>
-                  {isLocked ? "Нагороду вже отримано" : isSaving ? "Зберігаю..." : "Денна серія завершена"}
+                  {isLocked ? "Нагороду вже отримано" : isSaving ? "Зберігаю..." : "Денний челендж завершено"}
                 </SecondaryActionText>
               </SecondaryAction>
             )}

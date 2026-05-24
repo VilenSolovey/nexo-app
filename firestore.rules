@@ -92,6 +92,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /users/{userId}/miniGameStats/{statsId} {
+      allow read: if ownsUserDocument(userId);
+      allow create, update: if ownsUserDocument(userId);
+      allow delete: if false;
+    }
+
+    match /users/{userId}/miniGameResults/{resultId} {
+      allow read: if ownsUserDocument(userId);
+      allow create: if ownsUserDocument(userId) && ownsIncomingDocument();
+      allow update, delete: if false;
+    }
+
     match /quizzes/{quizId} {
       allow read: if canReadQuiz();
       allow write: if false;

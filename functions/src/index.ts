@@ -382,28 +382,36 @@ async function syncAchievementsForUser(
 
   const batch = db.batch();
   const unlocked: Array<{achievementId: string; tierId: string}> = [];
+  let hasWrites = false;
 
   for (const achievement of resolvedDefinitions) {
     const current = metrics[achievement.metric] ?? 0;
     const record = records.get(achievement.id);
     const tiersPayload: Record<string, {unlockedAt: unknown}> = {};
-    let highestUnlockedTier = Number(record?.highestUnlockedTier ?? -1);
+    const unlockedIndices = achievement.tiers
+      .map((tier, index) => current >= tier.target ? index : -1)
+      .filter((index) => index >= 0);
+    const highestUnlockedTier = Math.max(...unlockedIndices, -1);
+    const previousHighestUnlockedTier = Number(
+      record?.highestUnlockedTier ?? -1
+    );
 
     achievement.tiers.forEach((tier, index) => {
-      const alreadyUnlocked =
-        Boolean(record?.tiers?.[tier.id]?.unlockedAt) ||
-        highestUnlockedTier >= index;
+      const isUnlockedNow = current >= tier.target;
+      const alreadyHasTimestamp = Boolean(record?.tiers?.[tier.id]?.unlockedAt);
 
-      if (current < tier.target || alreadyUnlocked) {
+      if (!isUnlockedNow || alreadyHasTimestamp) {
         return;
       }
 
       tiersPayload[tier.id] = {unlockedAt: FieldValue.serverTimestamp()};
-      highestUnlockedTier = Math.max(highestUnlockedTier, index);
       unlocked.push({achievementId: achievement.id, tierId: tier.id});
     });
 
-    if (!Object.keys(tiersPayload).length) {
+    const shouldUpdateHighestUnlocked =
+      highestUnlockedTier !== previousHighestUnlockedTier;
+
+    if (!Object.keys(tiersPayload).length && !shouldUpdateHighestUnlocked) {
       continue;
     }
 
@@ -419,9 +427,10 @@ async function syncAchievementsForUser(
       },
       {merge: true}
     );
+    hasWrites = true;
   }
 
-  if (unlocked.length > 0) {
+  if (hasWrites) {
     await batch.commit();
   }
 
@@ -455,6 +464,16 @@ async function claimAchievementRewardForUser(
     throw new HttpsError("not-found", "Achievement tier not found.");
   }
 
+  const metrics = await getAchievementMetrics(userId);
+  const current = metrics[achievement.metric] ?? 0;
+
+  if (current < tier.target) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Tier target is not reached yet."
+    );
+  }
+
   return db.runTransaction(async (transaction) => {
     const userRef = db.collection("users").doc(userId);
     const achievementRef = userRef.collection("achievements")
@@ -478,6 +497,7 @@ async function claimAchievementRewardForUser(
     const record = achievementSnapshot.data() as AchievementRecord;
     const tiers = record.tiers ?? {};
     const requestedTier = tiers[tierId];
+    const highestClaimedTier = Number(record.highestClaimedTier ?? -1);
 
     if (!requestedTier?.unlockedAt) {
       throw new HttpsError(
@@ -486,15 +506,18 @@ async function claimAchievementRewardForUser(
       );
     }
 
-    if (requestedTier.claimedAt) {
+    if (requestedTier.claimedAt || highestClaimedTier >= tierIndex) {
       throw new HttpsError(
         "failed-precondition",
         "Reward already claimed."
       );
     }
 
-    const firstUnclaimedTier = achievement.tiers.find((item) =>
-      tiers[item.id]?.unlockedAt && !tiers[item.id]?.claimedAt
+    const firstUnclaimedTier = achievement.tiers.find((item, index) =>
+      current >= item.target &&
+      tiers[item.id]?.unlockedAt &&
+      !tiers[item.id]?.claimedAt &&
+      highestClaimedTier < index
     );
 
     if (firstUnclaimedTier?.id !== tierId) {
@@ -753,13 +776,17 @@ async function getActiveChapterQuestions(
 function getTrialUnlockState(params: {
   chapterData: FirebaseFirestore.DocumentData | undefined;
   progressRows: FirebaseFirestore.DocumentData[];
+  questionStatsRows?: FirebaseFirestore.DocumentData[];
 }): TrialUnlockState {
-  const answered = params.progressRows.reduce(
-    (sum, progress) => sum + Number(progress.answered ?? 0),
+  const answerRows = params.questionStatsRows ?
+    params.questionStatsRows :
+    params.progressRows;
+  const answered = answerRows.reduce(
+    (sum, row) => sum + Number(row.attempts ?? row.answered ?? 0),
     0
   );
-  const correct = params.progressRows.reduce(
-    (sum, progress) => sum + Number(progress.correct ?? 0),
+  const correct = answerRows.reduce(
+    (sum, row) => sum + Number(row.correct ?? 0),
     0
   );
   const unlockedFragments = params.progressRows.filter(
@@ -808,17 +835,23 @@ async function getTrialUnlockStateForUser(
   userId: string,
   chapterId: string
 ): Promise<TrialUnlockState> {
-  const [chapterSnapshot, progressSnapshot] = await Promise.all([
-    db.collection("chapters").doc(chapterId).get(),
-    db.collection("userFragmentProgress")
-      .where("userId", "==", userId)
-      .where("chapterId", "==", chapterId)
-      .get(),
-  ]);
+  const [chapterSnapshot, progressSnapshot, questionStatsSnapshot] =
+    await Promise.all([
+      db.collection("chapters").doc(chapterId).get(),
+      db.collection("userFragmentProgress")
+        .where("userId", "==", userId)
+        .where("chapterId", "==", chapterId)
+        .get(),
+      db.collection("userQuestionStats")
+        .where("userId", "==", userId)
+        .where("chapterId", "==", chapterId)
+        .get(),
+    ]);
 
   return getTrialUnlockState({
     chapterData: chapterSnapshot.data(),
     progressRows: progressSnapshot.docs.map((doc) => doc.data()),
+    questionStatsRows: questionStatsSnapshot.docs.map((doc) => doc.data()),
   });
 }
 
@@ -853,36 +886,56 @@ async function refreshProgressSummary(params: {
 
   await fragmentBatch.commit();
 
-  const [chapterSnapshot, progressSnapshot] = await Promise.all([
-    db.collection("chapters").doc(params.chapterId).get(),
-    db.collection("userFragmentProgress")
-      .where("userId", "==", params.userId)
-      .where("chapterId", "==", params.chapterId)
-      .get(),
-  ]);
+  const chapterProgressRef = db.collection("userChapterProgress")
+    .doc(`${params.userId}_${params.chapterId}`);
+  const [
+    chapterSnapshot,
+    progressSnapshot,
+    questionStatsSnapshot,
+    chapterProgressSnapshot,
+  ] =
+    await Promise.all([
+      db.collection("chapters").doc(params.chapterId).get(),
+      db.collection("userFragmentProgress")
+        .where("userId", "==", params.userId)
+        .where("chapterId", "==", params.chapterId)
+        .get(),
+      db.collection("userQuestionStats")
+        .where("userId", "==", params.userId)
+        .where("chapterId", "==", params.chapterId)
+        .get(),
+      chapterProgressRef.get(),
+    ]);
 
   const progressRows = progressSnapshot.docs.map((doc) => doc.data());
   const unlockState = getTrialUnlockState({
     chapterData: chapterSnapshot.data(),
     progressRows,
+    questionStatsRows: questionStatsSnapshot.docs.map((doc) => doc.data()),
   });
 
-  await db.collection("userChapterProgress")
-    .doc(`${params.userId}_${params.chapterId}`)
-    .set({
-      userId: params.userId,
-      chapterId: params.chapterId,
-      status: unlockState.trialUnlocked ? "trial_unlocked" : "active",
-      answered: unlockState.answered,
-      correct: unlockState.correct,
-      accuracyPercent: unlockState.accuracyPercent,
-      unlockedFragments: unlockState.unlockedFragments,
-      masteredFragments: unlockState.masteredFragments,
-      requiredUnlockedFragments: unlockState.requiredUnlockedFragments,
-      trialUnlocked: unlockState.trialUnlocked,
-      completed: false,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, {merge: true});
+  const currentChapterProgress = chapterProgressSnapshot.data() ?? {};
+  const alreadyCompleted = currentChapterProgress.completed === true ||
+    currentChapterProgress.status === "completed";
+
+  await chapterProgressRef.set({
+    userId: params.userId,
+    chapterId: params.chapterId,
+    status: alreadyCompleted ? "completed" :
+      unlockState.trialUnlocked ? "trial_unlocked" : "active",
+    answered: unlockState.answered,
+    correct: unlockState.correct,
+    accuracyPercent: unlockState.accuracyPercent,
+    unlockedFragments: unlockState.unlockedFragments,
+    masteredFragments: unlockState.masteredFragments,
+    requiredUnlockedFragments: unlockState.requiredUnlockedFragments,
+    requiredMasteredFragments: unlockState.requiredMasteredFragments,
+    requiredAnsweredQuestions: unlockState.requiredAnsweredQuestions,
+    requiredAccuracyPercent: unlockState.requiredAccuracyPercent,
+    trialUnlocked: alreadyCompleted ? true : unlockState.trialUnlocked,
+    completed: alreadyCompleted,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, {merge: true});
 }
 
 async function createChronicleQuizForUser(

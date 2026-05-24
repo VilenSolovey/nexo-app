@@ -91,14 +91,13 @@ function buildAchievements(
   return definitions.map((achievement) => {
     const current = metrics[achievement.metric] ?? 0
     const record = recordIndex.get(achievement.id)
-    const highestUnlockedFromRecord = record?.highestUnlockedTier ?? -1
     const highestClaimedFromRecord = record?.highestClaimedTier ?? -1
 
     const tiers: AchievementTierViewModel[] = achievement.tiers.map((tier, index) => {
       const storedTier = record?.tiers?.[tier.id]
-      const persistedUnlocked = Boolean(storedTier?.unlockedAt) || highestUnlockedFromRecord >= index
-      const unlocked = persistedUnlocked || current >= tier.target
-      const claimed = Boolean(storedTier?.claimedAt) || highestClaimedFromRecord >= index
+      const unlocked = current >= tier.target
+      const claimed =
+        unlocked && (Boolean(storedTier?.claimedAt) || highestClaimedFromRecord >= index)
 
       return {
         ...tier,
@@ -106,8 +105,8 @@ function buildAchievements(
         progress: Math.min(100, Math.round((current / tier.target) * 100)),
         unlocked,
         claimed,
-        unlockedAt: storedTier?.unlockedAt ?? null,
-        claimedAt: storedTier?.claimedAt ?? null,
+        unlockedAt: unlocked ? storedTier?.unlockedAt ?? null : null,
+        claimedAt: claimed ? storedTier?.claimedAt ?? null : null,
       }
     })
 
@@ -115,15 +114,10 @@ function buildAchievements(
     const claimedTierCount = tiers.filter((tier) => tier.claimed).length
     const unlockedIndices = tiers.filter((tier) => tier.unlocked).map((tier) => tier.index)
     const claimedIndices = tiers.filter((tier) => tier.claimed).map((tier) => tier.index)
-    const highestUnlockedTier = Math.max(record?.highestUnlockedTier ?? -1, ...unlockedIndices, -1)
-    const highestClaimedTier = Math.max(record?.highestClaimedTier ?? -1, ...claimedIndices, -1)
+    const highestUnlockedTier = Math.max(...unlockedIndices, -1)
+    const highestClaimedTier = Math.max(...claimedIndices, -1)
     const nextTier = tiers.find((tier) => !tier.unlocked) ?? null
-    const claimableTier =
-      tiers.find((tier) => {
-        const storedTier = record?.tiers?.[tier.id]
-        const persistedUnlocked = Boolean(storedTier?.unlockedAt) || highestUnlockedFromRecord >= tier.index
-        return persistedUnlocked && !tier.claimed
-      }) ?? null
+    const claimableTier = tiers.find((tier) => tier.unlocked && !tier.claimed) ?? null
     const previousTarget = highestUnlockedTier >= 0 ? achievement.tiers[highestUnlockedTier].target : 0
     const nextTarget = nextTier?.target ?? previousTarget
     const span = Math.max(nextTarget - previousTarget, 1)

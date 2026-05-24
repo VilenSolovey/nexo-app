@@ -16,6 +16,7 @@ import type {
   UserFragmentProgress,
   UserChallengeProgress,
   UserChapterProgress,
+  UserQuestionStats,
 } from '@nexo/types/chronicle.types'
 
 const CHAPTERS_COLLECTION = 'chapters'
@@ -25,6 +26,7 @@ const CHALLENGE_SLOTS_COLLECTION = 'challengeSlots'
 const USER_FRAGMENT_PROGRESS_COLLECTION = 'userFragmentProgress'
 const USER_CHALLENGE_PROGRESS_COLLECTION = 'userChallengeProgress'
 const USER_CHAPTER_PROGRESS_COLLECTION = 'userChapterProgress'
+const USER_QUESTION_STATS_COLLECTION = 'userQuestionStats'
 
 export async function getChronicleChapters(): Promise<ChronicleChapter[]> {
   const q = query(
@@ -119,6 +121,23 @@ export async function getUserFragmentProgressList(
     id: item.id,
     ...item.data(),
   })) as unknown as UserFragmentProgress[]
+}
+
+export async function getUserQuestionStatsList(
+  userId: string,
+  chapterId: string,
+): Promise<UserQuestionStats[]> {
+  const q = query(
+    collection(db, USER_QUESTION_STATS_COLLECTION),
+    where('userId', '==', userId),
+    where('chapterId', '==', chapterId),
+  )
+  const snapshot = await getDocs(q)
+
+  return snapshot.docs.map((item) => ({
+    id: item.id,
+    ...item.data(),
+  })) as unknown as UserQuestionStats[]
 }
 
 export async function getUserChallengeProgressList(

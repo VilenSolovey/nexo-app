@@ -26,6 +26,11 @@ import {
   isQuizProgressCompleted,
   PERFECT_QUIZ_SCORE,
 } from '@nexo/utils/quiz-progress';
+import {
+  getCorrectAnswerValue,
+  isAnswerProvided,
+  isCorrectAnswer,
+} from '@nexo/utils/quiz-answers';
 import { getQuizDurationSeconds } from '@nexo/utils/quiz-time';
 import { QuizHeader } from '@nexo/components/Quiz/Play/QuizHeader';
 import { PowerUpsPanel } from '@nexo/components/Quiz/Play/PowerUpsPanel';
@@ -110,68 +115,6 @@ export default function QuizPlayScreen() {
 
     return disabled
   }, [currentHint, currentQuestion?.options, normalizedQuestionType])
-
-  const getCorrectAnswerValue = (question: any) => {
-    if (question?.correctAnswer !== undefined) {
-      return question.correctAnswer;
-    }
-
-    if (
-      Array.isArray(question?.correctOptionIndexes) &&
-      Array.isArray(question?.options)
-    ) {
-      return question.correctOptionIndexes
-        .map((index: number) => question.options[index])
-        .filter((value: string | undefined) => value !== undefined);
-    }
-
-    if (
-      Array.isArray(question?.options) &&
-      typeof question?.correctOptionIndex === 'number'
-    ) {
-      return question.options[question.correctOptionIndex];
-    }
-
-    return undefined;
-  };
-
-  const isAnswerProvided = (answer: any) => {
-    if (typeof answer === 'boolean') return true;
-    if (Array.isArray(answer)) return answer.length > 0;
-    if (typeof answer === 'string') return answer.trim().length > 0;
-    return answer !== undefined && answer !== null;
-  };
-
-  const isCorrectAnswer = (question: any, userAnswer: any) => {
-    const correctAnswer = getCorrectAnswerValue(question);
-
-    if (correctAnswer === undefined || userAnswer === undefined || userAnswer === null) {
-      return false;
-    }
-
-    const normalizedType = String(question?.type || '')
-      .toLowerCase()
-      .replace(/[^a-z0-9_]/g, '_');
-
-    if (normalizedType === 'multiple_choice') {
-      const selectedAnswers = Array.isArray(userAnswer) ? [...userAnswer].sort() : [userAnswer];
-      const normalizedCorrectAnswers = Array.isArray(correctAnswer)
-        ? [...correctAnswer].sort()
-        : [correctAnswer];
-
-      if (selectedAnswers.length !== normalizedCorrectAnswers.length) {
-        return false;
-      }
-
-      return selectedAnswers.every((answer, index) => answer === normalizedCorrectAnswers[index]);
-    }
-
-    if (normalizedType === 'fill_blank' || normalizedType === 'single_answer') {
-      return String(userAnswer).toLowerCase().trim() === String(correctAnswer).toLowerCase().trim();
-    }
-
-    return userAnswer === correctAnswer;
-  };
 
   const answersRef = React.useRef<Record<string, any>>({});
   answersRef.current = answers;
