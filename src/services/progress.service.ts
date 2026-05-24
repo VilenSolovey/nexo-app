@@ -12,7 +12,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from '@nexo/services/firebase'
-import type { UserQuizProgress } from '@nexo/types/result.types'
+import type { QuizAnswerDetail, UserQuizProgress } from '@nexo/types/result.types'
 import { isQuizCompleted } from '@nexo/utils/quiz-progress'
 
 function progressDocId(userId: string, quizId: string): string {
@@ -34,6 +34,8 @@ export interface SaveQuizAttemptParams {
   backgroundCount?: number
   backgroundDurationMs?: number
   maxAttempts?: number
+  answers?: Record<string, unknown> | null
+  answerDetails?: QuizAnswerDetail[] | null
 }
 
 export interface SaveQuizAttemptResult {
@@ -64,6 +66,8 @@ export async function saveQuizAttempt(
     backgroundCount = 0,
     backgroundDurationMs = 0,
     maxAttempts,
+    answers = null,
+    answerDetails = null,
   } = params
   const percentageScore = Math.round((score / total) * 100)
 
@@ -82,6 +86,8 @@ export async function saveQuizAttempt(
     completedAt: serverTimestamp(),
     passed,
     timeExpired,
+    answers,
+    answerDetails,
   })
 
   const progressRef = doc(db, 'userQuizProgress', progressDocId(userId, quizId))

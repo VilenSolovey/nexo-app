@@ -24,6 +24,7 @@ import { ResultHero } from '@nexo/components/Quiz/Result/ResultHero';
 import { ScoreSummaryCard } from '@nexo/components/Quiz/Result/ScoreSummaryCard';
 import { RewardsSummaryCard } from '@nexo/components/Quiz/Result/RewardsSummaryCard';
 import { ResultActions } from '@nexo/components/Quiz/Result/ResultActions';
+import { buildQuizAnswerDetails } from '@nexo/utils/quiz-answers';
 
 function parseAnswersParam(value: unknown): Record<string, unknown> | null {
   if (typeof value !== 'string' || !value.trim()) return null;
@@ -79,6 +80,10 @@ export default function QuizResultScreen() {
   const resolvedAnswers = React.useMemo(
     () => parseAnswersParam(answers),
     [answers],
+  );
+  const resolvedAnswerDetails = React.useMemo(
+    () => quiz ? buildQuizAnswerDetails(quiz, resolvedAnswers) : null,
+    [quiz, resolvedAnswers],
   );
   const percentage = Math.round((correctCount / totalCount) * 100);
   const hasPerfectScore = percentage >= PERFECT_QUIZ_SCORE;
@@ -196,6 +201,8 @@ export default function QuizResultScreen() {
         backgroundCount: resolvedBackgroundCount,
         backgroundDurationMs: resolvedBackgroundDurationMs,
         maxAttempts,
+        answers: resolvedAnswers,
+        answerDetails: resolvedAnswerDetails,
       });
 
       setMastered(progressResult.mastered);
@@ -226,6 +233,7 @@ export default function QuizResultScreen() {
     resolvedCoinsBoost,
     resolvedExpBoost,
     resolvedAnswers,
+    resolvedAnswerDetails,
     maxAttempts,
     didLeaveAppDuringQuiz,
     sessionId,

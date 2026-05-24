@@ -19,12 +19,14 @@ import {
   FloatingWrap,
 } from "@nexo/components/Home/MiniGameOfDay/MiniGameOfDay.styled"
 import { useAuth } from "@nexo/contexts/AuthProvider"
+import { recordMiniGameStats } from "@nexo/services/mini-game-stats.service"
 import { applyUserRewards } from "@nexo/services/user.service"
 import {
   clearStoredMiniGameResult,
   getMiniGameDateKey,
   getMiniGameOfDay,
   getStoredMiniGameResult,
+  MINI_GAME_WIN_COINS,
   saveMiniGameResult,
   type DailyMiniGameResult,
 } from "@nexo/utils/daily-mini-game"
@@ -87,14 +89,25 @@ export function MiniGameOfDay() {
       playedAt: Date.now(),
       won: payload.won,
       rewardCoins: payload.rewardCoins,
-      playerScore: payload.playerScore,
-      opponentScore: payload.opponentScore,
+      progressScore: payload.progressScore,
+      riskScore: payload.riskScore,
     }
 
     setStoredResult(result)
 
     try {
       await saveMiniGameResult(result)
+
+      if (userId) {
+        try {
+          const nextStats = await recordMiniGameStats(userId, result)
+          if (__DEV__) {
+            console.log("Mini game stats:", nextStats)
+          }
+        } catch (error) {
+          console.error("Failed to save mini game stats:", error)
+        }
+      }
 
       if (userId && result.rewardCoins > 0) {
         await applyUserRewards(userId, {
@@ -108,14 +121,44 @@ export function MiniGameOfDay() {
   }
 
   const statusText = storedResult
-    ? storedResult.won
-      ? `Серія ${storedResult.playerScore}:${storedResult.opponentScore}`
-      : `Реванш завтра • ${storedResult.playerScore}:${storedResult.opponentScore}`
-    : "Нова денна серія до 3 перемог"
+    ? todayGame.id === "mine_pick"
+      ? storedResult.won
+        ? `Поле очищено • ${storedResult.progressScore}/5`
+        : `Спроба завершена • міни ${storedResult.riskScore}/2`
+      : todayGame.id === "memory_sequence"
+        ? storedResult.won
+          ? `Успіхи ${storedResult.progressScore}/3`
+          : `Помилки ${storedResult.riskScore}/3`
+        : todayGame.id === "timing_lock"
+          ? storedResult.won
+            ? `Влучання ${storedResult.progressScore}/3`
+            : `Промахи ${storedResult.riskScore}/3`
+          : todayGame.id === "blackjack"
+            ? storedResult.won
+              ? `Виграні руки ${storedResult.progressScore}/3`
+              : `Програні ${storedResult.riskScore}/3`
+            : todayGame.id === "rock_paper_scissors"
+            ? storedResult.won
+              ? `Перемоги ${storedResult.progressScore}/3`
+              : `Поразки ${storedResult.riskScore}/3`
+            : storedResult.won
+              ? `Влучання ${storedResult.progressScore}/3`
+              : `Промахи ${storedResult.riskScore}/3`
+    : todayGame.id === "mine_pick"
+      ? "Знайди 5 безпечних плиток"
+      : todayGame.id === "memory_sequence"
+        ? "Повтори 3 послідовності"
+        : todayGame.id === "timing_lock"
+          ? "Зупини індикатор у зеленій зоні"
+          : todayGame.id === "blackjack"
+            ? "Виграй 3 руки до 21"
+            : todayGame.id === "rock_paper_scissors"
+            ? "Збери 3 переможні раунди"
+            : "Збери 3 влучання"
 
   const rewardText = storedResult
     ? `+${storedResult.rewardCoins} монет`
-    : `До +5 монет`
+    : `До +${MINI_GAME_WIN_COINS} монет`
 
   return (
     <>
