@@ -1,21 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORY_ORDER } from '@nexo/constants/achievements'
+import { ACHIEVEMENT_CATEGORY_ORDER } from '@nexo/constants/achievements'
 import {
   claimAchievementReward,
+  getAchievementDefinitions,
+  getUserAchievementChallengeProgressList,
+  getUserAchievementChapterProgressList,
+  getUserAchievementFragmentProgressList,
   getUserAchievementRecords,
   getUserResultsList,
   syncUnlockedAchievements,
 } from '@nexo/services/achievement.service'
-import { getUserQuizProgressList } from '@nexo/services/progress.service'
 import type { UserProfile } from '@nexo/types/user.types'
 import type {
   AchievementCategory,
+  AchievementDefinition,
   AchievementMetric,
   AchievementTierViewModel,
   AchievementViewModel,
   UserAchievementRecord,
 } from '@nexo/types/achievement.types'
-import type { QuizResult, UserQuizProgress } from '@nexo/types/result.types'
+import type {
+  UserChallengeProgress,
+  UserChapterProgress,
+  UserFragmentProgress,
+} from '@nexo/types/chronicle.types'
+import type { QuizResult } from '@nexo/types/result.types'
 
 type Metrics = Record<AchievementMetric, number>
 
@@ -34,50 +43,61 @@ type ClaimRewardResult = {
 function getMetrics(
   userProfile: UserProfile | null | undefined,
   results: QuizResult[],
-  progressList: UserQuizProgress[],
+  chapterProgressList: UserChapterProgress[],
+  fragmentProgressList: UserFragmentProgress[],
+  challengeProgressList: UserChallengeProgress[],
 ): Metrics {
   const uniqueQuizzes = new Set(results.map((item) => item.quizId)).size
-  const passedQuizzes = progressList.filter(
-    (item) => item.officialPassed || item.passedCount > 0,
-  ).length
   const perfectScores = results.filter((item) => item.total > 0 && item.score === item.total).length
-  const bestScore = progressList.reduce((max, item) => Math.max(max, item.bestScore ?? 0), 0)
   const streakDays = userProfile?.streakDays ?? userProfile?.streak ?? 0
-  const masteredQuizzes = progressList.filter((item) => item.completed).length
   const level = userProfile?.level ?? 1
-  const coins = userProfile?.coins ?? 0
-  const fastPasses = results.filter((item) => item.passed && item.timeSpent <= 45).length
+  const completedChronicles = chapterProgressList.filter((item) => item.completed).length
+  const unlockedFragments = fragmentProgressList.filter((item) => item.unlocked).length
+  const masteredChronicles = chapterProgressList.filter(
+    (item) => (item.answered ?? 0) >= 30 && (item.accuracyPercent ?? 0) >= 80,
+  ).length
+  const perfectChallenges = challengeProgressList.filter(
+    (item) =>
+      (item.status === 'completed' || item.status === 'archived') &&
+      (item.bestScore ?? 0) >= 100,
+  ).length
+  const userStats = userProfile?.stats ?? {}
+  const mistakesFixed = Number(userStats.mistakesFixed ?? userProfile?.mistakesFixed ?? 0)
+  const bestCorrectStreak = Number(
+    userStats.bestCorrectStreak ?? userProfile?.bestCorrectStreak ?? 0,
+  )
 
   return {
     uniqueQuizzes,
-    passedQuizzes,
     perfectScores,
-    bestScore,
     streakDays,
-    masteredQuizzes,
     level,
-    coins,
-    fastPasses,
+    completedChronicles,
+    unlockedFragments,
+    mistakesFixed,
+    bestCorrectStreak,
+    masteredChronicles,
+    perfectChallenges,
   }
 }
 
 function buildAchievements(
+  definitions: AchievementDefinition[],
   metrics: Metrics,
   userAchievements: UserAchievementRecord[],
 ): AchievementViewModel[] {
   const recordIndex = new Map(userAchievements.map((item) => [item.achievementId, item]))
 
-  return ACHIEVEMENTS.map((achievement) => {
+  return definitions.map((achievement) => {
     const current = metrics[achievement.metric] ?? 0
     const record = recordIndex.get(achievement.id)
-    const highestUnlockedFromRecord = record?.highestUnlockedTier ?? -1
     const highestClaimedFromRecord = record?.highestClaimedTier ?? -1
 
     const tiers: AchievementTierViewModel[] = achievement.tiers.map((tier, index) => {
       const storedTier = record?.tiers?.[tier.id]
-      const persistedUnlocked = Boolean(storedTier?.unlockedAt) || highestUnlockedFromRecord >= index
-      const unlocked = persistedUnlocked || current >= tier.target
-      const claimed = Boolean(storedTier?.claimedAt) || highestClaimedFromRecord >= index
+      const unlocked = current >= tier.target
+      const claimed =
+        unlocked && (Boolean(storedTier?.claimedAt) || highestClaimedFromRecord >= index)
 
       return {
         ...tier,
@@ -85,8 +105,8 @@ function buildAchievements(
         progress: Math.min(100, Math.round((current / tier.target) * 100)),
         unlocked,
         claimed,
-        unlockedAt: storedTier?.unlockedAt ?? null,
-        claimedAt: storedTier?.claimedAt ?? null,
+        unlockedAt: unlocked ? storedTier?.unlockedAt ?? null : null,
+        claimedAt: claimed ? storedTier?.claimedAt ?? null : null,
       }
     })
 
@@ -94,15 +114,10 @@ function buildAchievements(
     const claimedTierCount = tiers.filter((tier) => tier.claimed).length
     const unlockedIndices = tiers.filter((tier) => tier.unlocked).map((tier) => tier.index)
     const claimedIndices = tiers.filter((tier) => tier.claimed).map((tier) => tier.index)
-    const highestUnlockedTier = Math.max(record?.highestUnlockedTier ?? -1, ...unlockedIndices, -1)
-    const highestClaimedTier = Math.max(record?.highestClaimedTier ?? -1, ...claimedIndices, -1)
+    const highestUnlockedTier = Math.max(...unlockedIndices, -1)
+    const highestClaimedTier = Math.max(...claimedIndices, -1)
     const nextTier = tiers.find((tier) => !tier.unlocked) ?? null
-    const claimableTier =
-      tiers.find((tier) => {
-        const storedTier = record?.tiers?.[tier.id]
-        const persistedUnlocked = Boolean(storedTier?.unlockedAt) || highestUnlockedFromRecord >= tier.index
-        return persistedUnlocked && !tier.claimed
-      }) ?? null
+    const claimableTier = tiers.find((tier) => tier.unlocked && !tier.claimed) ?? null
     const previousTarget = highestUnlockedTier >= 0 ? achievement.tiers[highestUnlockedTier].target : 0
     const nextTarget = nextTier?.target ?? previousTarget
     const span = Math.max(nextTarget - previousTarget, 1)
@@ -129,41 +144,12 @@ function buildAchievements(
   })
 }
 
-function mergeSyncedAchievements(
-  currentRecords: UserAchievementRecord[],
-  syncedAchievements: AchievementViewModel[],
-) {
-  const unlockedAt = new Date().toISOString()
-  const recordMap = new Map(currentRecords.map((item) => [item.achievementId, item]))
-
-  syncedAchievements.forEach((achievement) => {
-    const existing = recordMap.get(achievement.id)
-    const mergedTiers = { ...(existing?.tiers ?? {}) }
-
-    achievement.tiers
-      .filter((tier) => tier.unlocked)
-      .forEach((tier) => {
-        mergedTiers[tier.id] = {
-          unlockedAt: mergedTiers[tier.id]?.unlockedAt ?? unlockedAt,
-          claimedAt: mergedTiers[tier.id]?.claimedAt ?? null,
-        }
-      })
-
-    recordMap.set(achievement.id, {
-      achievementId: achievement.id,
-      highestUnlockedTier: Math.max(existing?.highestUnlockedTier ?? -1, achievement.highestUnlockedTier),
-      highestClaimedTier: existing?.highestClaimedTier ?? -1,
-      tiers: mergedTiers,
-      updatedAt: unlockedAt,
-    })
-  })
-
-  return Array.from(recordMap.values())
-}
-
 export function useAchievements(userId?: string, userProfile?: UserProfile | null) {
+  const [definitions, setDefinitions] = useState<AchievementDefinition[]>([])
   const [results, setResults] = useState<QuizResult[]>([])
-  const [progressList, setProgressList] = useState<UserQuizProgress[]>([])
+  const [chapterProgressList, setChapterProgressList] = useState<UserChapterProgress[]>([])
+  const [fragmentProgressList, setFragmentProgressList] = useState<UserFragmentProgress[]>([])
+  const [challengeProgressList, setChallengeProgressList] = useState<UserChallengeProgress[]>([])
   const [userAchievements, setUserAchievements] = useState<UserAchievementRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [hasFetchedOnce, setHasFetchedOnce] = useState(false)
@@ -177,8 +163,11 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
 
   const refetch = useCallback(async () => {
     if (!userId) {
+      setDefinitions([])
       setResults([])
-      setProgressList([])
+      setChapterProgressList([])
+      setFragmentProgressList([])
+      setChallengeProgressList([])
       setUserAchievements([])
       setLoading(false)
       setHasFetchedOnce(true)
@@ -189,15 +178,28 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
     setError(null)
 
     try {
-      const [fetchedResults, fetchedProgress, fetchedAchievements] = await Promise.all([
+      const [
+        fetchedResults,
+        fetchedDefinitions,
+        fetchedAchievements,
+        fetchedChapterProgress,
+        fetchedFragmentProgress,
+        fetchedChallengeProgress,
+      ] = await Promise.all([
         getUserResultsList(userId),
-        getUserQuizProgressList(userId),
+        getAchievementDefinitions(),
         getUserAchievementRecords(userId),
+        getUserAchievementChapterProgressList(userId),
+        getUserAchievementFragmentProgressList(userId),
+        getUserAchievementChallengeProgressList(userId),
       ])
 
+      setDefinitions(fetchedDefinitions)
       setResults(fetchedResults)
-      setProgressList(fetchedProgress)
       setUserAchievements(fetchedAchievements)
+      setChapterProgressList(fetchedChapterProgress)
+      setFragmentProgressList(fetchedFragmentProgress)
+      setChallengeProgressList(fetchedChallengeProgress)
     } catch (e: any) {
       setError(e?.message ?? 'Не вдалося завантажити ачівки')
     } finally {
@@ -211,9 +213,23 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
   }, [refetch])
 
   const achievements = useMemo(() => {
-    const metrics = getMetrics(userProfile, results, progressList)
-    return buildAchievements(metrics, userAchievements)
-  }, [progressList, results, userAchievements, userProfile])
+    const metrics = getMetrics(
+      userProfile,
+      results,
+      chapterProgressList,
+      fragmentProgressList,
+      challengeProgressList,
+    )
+    return buildAchievements(definitions, metrics, userAchievements)
+  }, [
+    challengeProgressList,
+    chapterProgressList,
+    definitions,
+    fragmentProgressList,
+    results,
+    userAchievements,
+    userProfile,
+  ])
 
   const pendingSyncAchievements = useMemo(
     () =>
@@ -237,7 +253,11 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
         await syncUnlockedAchievements(resolvedUserId, pendingSyncAchievements, userAchievements)
 
         if (!cancelled) {
-          setUserAchievements((current) => mergeSyncedAchievements(current, pendingSyncAchievements))
+          const refreshedAchievements = await getUserAchievementRecords(resolvedUserId)
+
+          if (!cancelled) {
+            setUserAchievements(refreshedAchievements)
+          }
         }
       } catch (e) {
         console.error('Failed to sync achievements:', e)
@@ -261,7 +281,7 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
         throw new Error('User is not authenticated')
       }
 
-      const achievement = ACHIEVEMENTS.find((item) => item.id === achievementId)
+      const achievement = definitions.find((item) => item.id === achievementId)
       const tierIndex = achievement?.tiers.findIndex((tier) => tier.id === tierId) ?? -1
 
       if (!achievement || tierIndex < 0) {
@@ -322,7 +342,7 @@ export function useAchievements(userId?: string, userProfile?: UserProfile | nul
         setClaimingKey(null)
       }
     },
-    [refetch, userId],
+    [definitions, refetch, userId],
   )
 
   const groupedAchievements = useMemo<GroupedAchievements[]>(

@@ -1,5 +1,7 @@
 import styled from 'styled-components/native'
-import { Ionicons } from '@expo/vector-icons'
+import { FlatList } from 'react-native'
+import { Entrance } from '@nexo/components/Motion/Entrance'
+import type { Quiz } from '@nexo/types/quiz.types'
 
 export const Header = styled.View`
   padding-horizontal: 20px;
@@ -15,21 +17,18 @@ export const HeaderTitle = styled.Text`
 export const SearchContainer = styled.View`
   flex-direction: row;
   align-items: center;
-  background-color: ${({ theme }) => theme.background};
+  background-color: ${({ theme }) => theme.card};
   border-radius: 12px;
   margin-horizontal: 20px;
   margin-bottom: 16px;
   padding-horizontal: 16px;
   border-width: 1px;
   border-color: ${({ theme }) => theme.cardBorder};
-`
-
-export const SearchIcon = styled(Ionicons).attrs(({ theme }) => ({
-  name: 'search',
-  size: 20,
-  color: theme.textSecondary,
-}))`
-  margin-right: 8px;
+  shadow-color: ${({ theme }) => theme.primary};
+  shadow-opacity: 0.08;
+  shadow-radius: 14px;
+  shadow-offset: 0px 8px;
+  elevation: 3;
 `
 
 export const SearchInput = styled.TextInput.attrs(({ theme }) => ({
@@ -55,25 +54,16 @@ export const FilterTab = styled.TouchableOpacity<{ active?: boolean }>`
   padding-horizontal: 20px;
   padding-vertical: 8px;
   border-radius: 20px;
-  background-color: ${({ active, theme }) => (active ? theme.icon : theme.background)};
+  background-color: ${({ active, theme }) => (active ? theme.primary : theme.card)};
   margin-right: 12px;
   border-width: 1px;
-  border-color: ${({ active, theme }) => (active ? theme.icon : theme.cardBorder)};
+  border-color: ${({ active, theme }) => (active ? theme.primary : theme.cardBorder)};
 `
 
 export const FilterText = styled.Text<{ active?: boolean }>`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ active, theme }) => (active ? theme.primary : theme.textSecondary)};
-`
-
-export const ScrollContent = styled.ScrollView.attrs(() => ({
-  contentContainerStyle: {
-    padding: 20,
-  },
-  showsVerticalScrollIndicator: false,
-}))`
-  height: 80%;
+  color: ${({ active, theme }) => (active ? theme.background : theme.textSecondary)};
 `
 
 export const LoadingText = styled.Text`
@@ -81,72 +71,100 @@ export const LoadingText = styled.Text`
   align-self: center;
 `
 
+export const QuizList = styled(FlatList<Quiz>).attrs({
+  contentContainerStyle: {
+    flexGrow: 1,
+    padding: 20,
+  },
+  showsVerticalScrollIndicator: false,
+})`
+  flex: 1;
+`
+
+export const QuizEntrance = styled(Entrance)`
+  width: 100%;
+  align-items: stretch;
+`
+
 export const QuizCard = styled.TouchableOpacity`
   width: 100%;
   align-self: stretch;
-  background-color: ${({ theme }) => theme.background};
-  border-radius: 16px;
-  padding: 20px;
+  background-color: ${({ theme }) => theme.card};
+  border-radius: 22px;
+  padding: 17px;
   margin-bottom: 16px;
   border-width: 1px;
   border-color: ${({ theme }) => theme.cardBorder};
+  shadow-color: ${({ theme }) => theme.primary};
+  shadow-opacity: 0.11;
+  shadow-radius: 18px;
+  shadow-offset: 0px 10px;
+  elevation: 4;
 `
 
-export const QuizHeader = styled.View`
+export const QuizLead = styled.View`
   flex-direction: row;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  align-items: center;
+  column-gap: 14px;
 `
 
-export const QuizBadge = styled.View<{ type: 'trial' | 'spark' }>`
-  padding-horizontal: 12px;
-  padding-vertical: 4px;
-  border-radius: 8px;
-  background-color: ${({ type }) =>
-    type === 'trial' ? 'rgba(111, 219, 202, 0.2)' : 'rgba(255, 107, 53, 0.2)'};
+export const QuizIconFrame = styled.View<{ type: 'trial' | 'spark' }>`
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 23px;
+  overflow: hidden;
+  background-color: ${({ type, theme }) =>
+    type === 'trial' ? `${theme.accentAlt}13` : `${theme.primary}13`};
+  border-width: 1px;
+  border-color: ${({ type, theme }) =>
+    type === 'trial' ? `${theme.accentAlt}32` : `${theme.primary}32`};
 `
 
-export const QuizBadgeText = styled.Text`
-  color: ${({ theme }) => theme.icon};
-  font-size: 12px;
-  font-weight: bold;
+export const QuizMain = styled.View`
+  flex: 1;
+  min-width: 0px;
 `
 
-export const DifficultyBadge = styled.View`
-  padding-horizontal: 12px;
-  padding-vertical: 4px;
-  border-radius: 8px;
-  background-color: rgba(255, 255, 255, 0.1);
-`
-
-export const DifficultyText = styled.Text`
-  color: ${({ theme }) => theme.textSecondary};
-  font-size: 12px;
-  text-transform: capitalize;
+export const QuizTypeLabel = styled.Text<{ type: 'trial' | 'spark' }>`
+  color: ${({ type, theme }) => type === 'trial' ? theme.accentAlt : theme.primary};
+  font-size: 10px;
+  line-height: 13px;
+  font-weight: 900;
+  letter-spacing: 1.25px;
+  margin-bottom: 5px;
 `
 
 export const QuizTitle = styled.Text`
-  font-size: 22px;
-  font-weight: bold;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 800;
   color: ${({ theme }) => theme.text};
-  margin-bottom: 4px;
 `
 
 export const QuizCategory = styled.Text`
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 18px;
   color: ${({ theme }) => theme.textSecondary};
-  margin-bottom: 16px;
+  margin-top: 5px;
 `
 
 export const QuizStats = styled.View`
   flex-direction: row;
-  margin-bottom: 16px;
+  margin-top: 16px;
+  margin-bottom: 15px;
+  column-gap: 9px;
 `
 
 export const StatItem = styled.View`
   flex-direction: row;
   align-items: center;
-  margin-right: 16px;
+  padding-horizontal: 10px;
+  padding-vertical: 7px;
+  border-radius: 11px;
+  background-color: ${({ theme }) => `${theme.background}80`};
 `
 
 export const StatText = styled.Text`
@@ -159,6 +177,9 @@ export const QuizFooter = styled.View`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+  padding-top: 14px;
+  border-top-width: 1px;
+  border-top-color: ${({ theme }) => theme.cardBorder};
 `
 
 export const Rewards = styled.View`
@@ -168,21 +189,26 @@ export const Rewards = styled.View`
 export const RewardItem = styled.View`
   flex-direction: row;
   align-items: center;
-  margin-right: 16px;
+  margin-right: 14px;
 `
 
 export const RewardText = styled.Text`
   font-size: 16px;
   font-weight: bold;
   color: ${({ theme }) => theme.text};
-  margin-left: 4px;
+  margin-left: 3px;
 `
 
 export const PlayButton = styled.View`
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
-  background-color: ${({ theme }) => theme.icon};
+  width: 44px;
+  height: 44px;
+  border-radius: 15px;
+  background-color: ${({ theme }) => theme.primary};
   justify-content: center;
   align-items: center;
+  shadow-color: ${({ theme }) => theme.primary};
+  shadow-opacity: 0.28;
+  shadow-radius: 14px;
+  shadow-offset: 0px 8px;
+  elevation: 5;
 `

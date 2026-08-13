@@ -3,7 +3,7 @@ import { styled } from 'styled-components/native'
 
 export const ScreenContent = styled.View`
   width: 100%;
-  gap: 16px;
+  gap: 12px;
   padding-bottom: 140px;
 `
 
@@ -99,8 +99,8 @@ export const HeroStatValue = styled.Text`
 export const SectionCard = styled.View`
   width: 100%;
   background-color: ${({ theme }) => theme.card};
-  border-radius: 24px;
-  padding: 18px;
+  border-radius: 21px;
+  padding: 15px;
   border-width: 1px;
   border-color: ${({ theme }) => theme.cardBorder};
 `
@@ -108,13 +108,13 @@ export const SectionCard = styled.View`
 export const SectionHeader = styled.View`
   flex-direction: row;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: 13px;
 `
 
 export const SectionIconWrap = styled.View`
-  width: 38px;
-  height: 38px;
-  border-radius: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
   background-color: rgba(94, 234, 212, 0.12);
   align-items: center;
   justify-content: center;
@@ -157,25 +157,6 @@ export const ProfileInput = styled.TextInput`
   padding: 14px;
   font-size: 16px;
   margin-bottom: 14px;
-`
-
-export const ReadonlyField = styled.View`
-  width: 100%;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  background-color: ${({ theme }) => theme.background};
-  border-width: 1px;
-  border-color: ${({ theme }) => theme.cardBorder};
-  border-radius: 16px;
-  padding: 14px;
-  margin-bottom: 16px;
-`
-
-export const ReadonlyText = styled.Text`
-  color: ${({ theme }) => theme.text};
-  font-size: 15px;
-  flex: 1;
 `
 
 export const PrimaryButton = styled.Pressable<{ $disabled?: boolean }>`
@@ -303,6 +284,7 @@ export const StatsGrid = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
   gap: 12px;
+  align-items: stretch;
 `
 
 export const StatsLoading = styled.View`
@@ -318,18 +300,21 @@ export const StatsLoadingText = styled.Text`
 `
 
 export const StatCard = styled.View`
-  width: 48%;
-  min-width: 150px;
+  flex-grow: 1;
+  flex-basis: 47%;
+  max-width: 48.5%;
+  min-height: 104px;
   background-color: ${({ theme }) => theme.background};
   border-radius: 18px;
   padding: 14px;
   border-width: 1px;
   border-color: ${({ theme }) => theme.cardBorder};
+  justify-content: flex-start;
 `
 
 export const StatValue = styled.Text`
   color: ${({ theme }) => theme.text};
-  font-size: 24px;
+  font-size: 21px;
   font-weight: 900;
   margin-top: 10px;
 `
@@ -376,10 +361,63 @@ export const DangerButton = styled.Pressable`
   justify-content: center;
   flex-direction: row;
   gap: 8px;
+  margin-top: 10px;
 `
 
 export const DangerButtonText = styled.Text`
   color: ${({ theme }) => theme.text};
   font-size: 15px;
   font-weight: 800;
+`
+
+export const AccountAction = styled.Pressable`
+  min-height: 58px;
+  flex-direction: row;
+  align-items: center;
+  padding: 10px;
+  border-radius: 16px;
+  background-color: ${({ theme }) => theme.background};
+  border-width: 1px;
+  border-color: ${({ theme }) => theme.cardBorder};
+`
+
+export const AccountActionIcon = styled.View`
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  align-items: center;
+  justify-content: center;
+  background-color: ${({ theme }) => `${theme.primary}15`};
+  margin-right: 11px;
+`
+
+export const AccountActionBody = styled.View`
+  flex: 1;
+  min-width: 0px;
+`
+
+export const AccountActionTitle = styled.Text`
+  color: ${({ theme }) => theme.text};
+  font-size: 14px;
+  font-weight: 800;
+`
+
+export const AccountActionDetail = styled.Text`
+  color: ${({ theme }) => theme.textSecondary};
+  font-size: 12px;
+  margin-top: 3px;
+`
+
+export const AccountEditor = styled.View`
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background-color: ${({ theme }) => `${theme.background}a8`};
+  border-width: 1px;
+  border-color: ${({ theme }) => theme.cardBorder};
+`
+
+export const AccountEditActions = styled.View`
+  flex-direction: row;
+  gap: 10px;
 `

@@ -1,4 +1,3 @@
-import { Appearance } from "react-native"
 import styled from "styled-components/native"
 
 
@@ -12,6 +11,11 @@ export const Container = styled.View`
 	border-radius: 16px;
  	border-width: 1px;
   	border-color: rgba(94, 234, 212, 0.18);
+	shadow-color: ${({ theme }) => theme.primary};
+	shadow-opacity: 0.16;
+	shadow-radius: 20px;
+	shadow-offset: 0px 12px;
+	elevation: 5;
 `;
 
 export const Left = styled.View`
@@ -37,11 +41,10 @@ export const Cta = styled.View`
 	align-items: center;
 	border-width: 1px;
 	border-color: ${({ theme }) => theme.primary};
-	background-color: transparent;
+	background-color: rgba(94, 234, 212, 0.1);
 `;
 
 export const CtaText = styled.Text`
   color: ${({ theme }) => theme.primary};
   font-weight: 800;
 `;
-

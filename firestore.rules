@@ -1,0 +1,181 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsExistingDocument() {
+      return signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    function ownsIncomingDocument() {
+      return signedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    function ownsUserDocument(userId) {
+      return signedIn() && userId == request.auth.uid;
+    }
+
+    function ownsFlatUserDocument(documentId) {
+      return signedIn() && documentId.matches(request.auth.uid + "_.*");
+    }
+
+    function canReadQuiz() {
+      return !('ownerId' in resource.data) ||
+        resource.data.ownerId == null ||
+        (signedIn() && resource.data.ownerId == request.auth.uid);
+    }
+
+    match /chapters/{chapterId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /fragments/{fragmentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /questions/{questionId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /challengeSlots/{slotId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /reconstructions/{reconstructionId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /functionTesters/{userId} {
+      allow read, write: if false;
+    }
+
+    match /achievementDefinitions/{achievementId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /quizRuns/{runId} {
+      allow read: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /userQuestionStats/{statId} {
+      allow read: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /userFragmentProgress/{progressId} {
+      allow read: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /userChapterProgress/{progressId} {
+      allow get: if ownsExistingDocument() || ownsFlatUserDocument(progressId);
+      allow list: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /userChallengeProgress/{progressId} {
+      allow read: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /userReconstructionProgress/{progressId} {
+      allow read: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /users/{userId} {
+      allow read, write: if ownsUserDocument(userId);
+    }
+
+    match /users/{userId}/achievements/{achievementId} {
+      allow read: if ownsUserDocument(userId);
+      allow write: if false;
+    }
+
+    match /users/{userId}/miniGameStats/{statsId} {
+      allow read: if ownsUserDocument(userId);
+      allow create, update: if ownsUserDocument(userId);
+      allow delete: if false;
+    }
+
+    match /users/{userId}/miniGameResults/{resultId} {
+      allow read: if ownsUserDocument(userId);
+      allow create: if ownsUserDocument(userId) && ownsIncomingDocument();
+      allow update, delete: if false;
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if canReadQuiz();
+      allow write: if false;
+    }
+
+    match /results/{resultId} {
+      allow read: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /userQuizProgress/{progressId} {
+      allow get: if ownsExistingDocument() || ownsFlatUserDocument(progressId);
+      allow list: if ownsExistingDocument();
+      allow write: if false;
+    }
+
+    match /quizSessions/{sessionId} {
+      allow read: if ownsExistingDocument();
+      allow create: if ownsIncomingDocument()
+        && request.resource.data.keys().hasAll([
+          'userId',
+          'quizId',
+          'status',
+          'currentAppState',
+          'backgroundCount',
+          'backgroundDurationMs',
+          'leftAppDuringQuiz',
+          'startedAt',
+          'lastActivityAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'userId',
+          'quizId',
+          'status',
+          'currentAppState',
+          'backgroundCount',
+          'backgroundDurationMs',
+          'leftAppDuringQuiz',
+          'startedAt',
+          'lastActivityAt'
+        ])
+        && request.resource.data.status == 'in_progress'
+        && request.resource.data.currentAppState == 'active';
+      allow update: if ownsExistingDocument()
+        && ownsIncomingDocument()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.quizId == resource.data.quizId
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'currentAppState',
+          'backgroundCount',
+          'backgroundDurationMs',
+          'leftAppDuringQuiz',
+          'lastMovedToBackgroundAt',
+          'lastReturnedToForegroundAt',
+          'lastActivityAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

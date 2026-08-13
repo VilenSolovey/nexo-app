@@ -2,6 +2,7 @@ import { doc, getDoc, setDoc, onSnapshot, updateDoc, arrayUnion, increment, runT
 import { db } from "@nexo/services/firebase"
 import type { UserProfile, CompletedQuiz } from "@nexo/types/user.types"
 import { getLevelFromExp } from "@nexo/utils/level"
+import { normalizeUserProfile } from "@nexo/utils/user-profile"
 
 function toLocalDateKey(date = new Date()) {
   const year = date.getFullYear()
@@ -45,42 +46,7 @@ export async function getUserById(userId: string) {
 export async function getCurrentUser(userId: string): Promise<UserProfile | null> {
   const raw = await getUserById(userId)
   if (!raw) return null
-  const exp = Number((raw as any).exp ?? 0)
-  const normalizedLevel = getLevelFromExp(exp)
-  // Defensive normalization with defaults
-  const u: UserProfile = {
-    id: String(raw.id),
-    displayName: String((raw as any).displayName ?? (raw as any).name ?? "User"),
-    email: String((raw as any).email ?? ""),
-    coins: Number((raw as any).coins ?? 0),
-    consumables:
-      typeof (raw as any).consumables === "object" && (raw as any).consumables !== null
-        ? Object.fromEntries(
-            Object.entries((raw as any).consumables).map(([key, value]) => [key, Number(value ?? 0)]),
-          )
-        : {},
-    streakDays: Number((raw as any).streakDays ?? 0),
-    level: normalizedLevel,
-    exp,
-    streak: Number((raw as any).streak ?? 0),
-    lastActiveDate: typeof (raw as any).lastActiveDate === "string" ? (raw as any).lastActiveDate : undefined,
-    longestStreak: Number((raw as any).longestStreak ?? 0),
-    achievements: Array.isArray((raw as any).achievements) ? (raw as any).achievements.map(String) : [],
-    inventory: Array.isArray((raw as any).inventory) ? (raw as any).inventory.map(String) : [],
-    selectedThemeId:
-      typeof (raw as any).selectedThemeId === "string" ? (raw as any).selectedThemeId : null,
-    selectedAvatarId:
-      typeof (raw as any).selectedAvatarId === "string" ? (raw as any).selectedAvatarId : null,
-    completedQuizzes: Array.isArray((raw as any).completedQuizzes)
-      ? (raw as any).completedQuizzes.map((cq: any) => ({
-          quizId: String(cq.quizId ?? cq.id ?? ""),
-          completedAt: Number(cq.completedAt ?? Date.now()),
-          score: typeof cq.score === "number" ? cq.score : undefined,
-          rewardEarned: typeof cq.rewardEarned === "number" ? cq.rewardEarned : undefined,
-        }))
-      : [],
-  }
-  return u
+  return normalizeUserProfile(String(raw.id), raw as Record<string, unknown>)
 }
 
 export function listenUser(userId: string, cb: (u: UserProfile | null) => void) {
@@ -88,47 +54,20 @@ export function listenUser(userId: string, cb: (u: UserProfile | null) => void) 
   return onSnapshot(ref, (snap) => {
     if (!snap.exists()) return cb(null)
     const raw = { id: snap.id, ...snap.data() }
-    const exp = Number((raw as any).exp ?? 0)
-    const normalizedLevel = getLevelFromExp(exp)
-    const u: UserProfile = {
-      id: String(raw.id),
-      displayName: String((raw as any).displayName ?? (raw as any).name ?? "User"),
-      email: String((raw as any).email ?? ""),
-      coins: Number((raw as any).coins ?? 0),
-      consumables:
-        typeof (raw as any).consumables === "object" && (raw as any).consumables !== null
-          ? Object.fromEntries(
-              Object.entries((raw as any).consumables).map(([key, value]) => [key, Number(value ?? 0)]),
-            )
-          : {},
-      streakDays: Number((raw as any).streakDays ?? 0),
-      level: normalizedLevel,
-      exp,
-      streak: Number((raw as any).streak ?? 0),
-      lastActiveDate: typeof (raw as any).lastActiveDate === "string" ? (raw as any).lastActiveDate : undefined,
-      longestStreak: Number((raw as any).longestStreak ?? 0),
-      achievements: Array.isArray((raw as any).achievements) ? (raw as any).achievements.map(String) : [],
-      inventory: Array.isArray((raw as any).inventory) ? (raw as any).inventory.map(String) : [],
-      selectedThemeId:
-        typeof (raw as any).selectedThemeId === "string" ? (raw as any).selectedThemeId : null,
-      selectedAvatarId:
-        typeof (raw as any).selectedAvatarId === "string" ? (raw as any).selectedAvatarId : null,
-      completedQuizzes: Array.isArray((raw as any).completedQuizzes)
-        ? (raw as any).completedQuizzes.map((cq: any) => ({
-            quizId: String(cq.quizId ?? cq.id ?? ""),
-            completedAt: Number(cq.completedAt ?? Date.now()),
-            score: typeof cq.score === "number" ? cq.score : undefined,
-            rewardEarned: typeof cq.rewardEarned === "number" ? cq.rewardEarned : undefined,
-          }))
-        : [],
-    }
-    cb(u)
+    cb(normalizeUserProfile(String(raw.id), raw as Record<string, unknown>))
   })
 }
 
 export async function updateUser(userId: string, data: Partial<Omit<UserProfile, "id" | "completedQuizzes">>) {
   const ref = doc(db, "users", userId)
   await updateDoc(ref, data)
+}
+
+export async function markNestorIntroSeen(userId: string, version = 1) {
+  await updateDoc(doc(db, "users", userId), {
+    nestorIntroSeenAt: new Date().toISOString(),
+    nestorIntroVersion: version,
+  })
 }
 
 export async function addCompletedQuiz(uid: string, item: CompletedQuiz, rewardEarned: number = 0) {
@@ -178,9 +117,9 @@ export async function applyUserRewards(
 export async function registerDailyActivity(uid: string): Promise<RegisterDailyActivityResult> {
   const todayKey = toLocalDateKey()
   const yesterdayKey = shiftDateKey(todayKey, -1)
+  const ref = doc(db, "users", uid)
 
   return runTransaction(db, async (transaction) => {
-    const ref = doc(db, "users", uid)
     const snap = await transaction.get(ref)
 
     if (!snap.exists()) {

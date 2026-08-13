@@ -1,3 +1,4 @@
+import Animated from "react-native-reanimated"
 import { styled } from "styled-components/native"
 
 export const LevelCard = styled.View`
@@ -9,6 +10,11 @@ export const LevelCard = styled.View`
   background-color: rgba(139, 92, 246, 0.12);
   border-width: 1px;
   border-color: rgba(139, 92, 246, 0.22);
+  shadow-color: ${({ theme }) => theme.exp};
+  shadow-opacity: 0.14;
+  shadow-radius: 20px;
+  shadow-offset: 0px 12px;
+  elevation: 5;
 `
 
 export const LevelCardHeader = styled.View`
@@ -62,7 +68,7 @@ export const LevelProgressTrack = styled.View`
   background-color: rgba(255, 255, 255, 0.08);
 `
 
-export const LevelProgressFill = styled.View`
+export const LevelProgressFill = styled(Animated.View)`
   height: 100%;
   border-radius: 999px;
   background-color: ${({ theme }) => theme.exp};

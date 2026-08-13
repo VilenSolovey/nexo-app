@@ -1,6 +1,9 @@
-import { Timestamp } from "firebase/firestore"
+import type { Timestamp } from "firebase/firestore"
+
 export type QuizType = "trial" | "spark"
-export type QuizCategory = string 
+export type QuizCategory = string
+export type QuizSource = "chronicle" | "manual"
+export type QuizRevealPolicy = "staged" | "full_after_first"
 
 export type Quiz = {
   id: string
@@ -13,6 +16,13 @@ export type Quiz = {
   time?: number
   description?: string
   exp?: number
+  source?: QuizSource
+  ownerId?: string | null
+  chapterId?: string
+  slotId?: string
+  targetFragmentIds?: string[]
+  maxAttempts?: number
+  revealPolicy?: QuizRevealPolicy
   createdAt?: Timestamp | number | string | Date | null
 }
 
@@ -58,4 +68,6 @@ export type RecentItem = Quiz & {
   completedAt: number
   score: number
   total: number
+  attempts: number
+  rewardEarned: number
 }

@@ -1,15 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react"
-import { Alert } from "react-native"
 import { SHOP_ITEMS } from "@nexo/constants/shop"
 import { ALL_THEME_OPTIONS, DEFAULT_THEME_ID, DEFAULT_THEME_OPTION } from "@nexo/constants/themes"
 import { RefreshableScreen } from "@nexo/components/RefreshableScreen"
 import { AccountSection } from "@nexo/components/Settings/AccountSection"
 import { CosmeticsSection } from "@nexo/components/Settings/CosmeticsSection"
-import { ProfileSection } from "@nexo/components/Settings/ProfileSection"
 import { SettingsHero } from "@nexo/components/Settings/SettingsHero"
 import { ScreenContent } from "@nexo/components/Settings/Settings.styled"
 import { StatsSection } from "@nexo/components/Settings/StatsSection"
 import { useAuth } from "@nexo/contexts/AuthProvider"
+import { useFeedback } from "@nexo/contexts/FeedbackProvider"
 import { useRouter } from "expo-router"
 import { useAchievements } from "@nexo/hooks/useAchievements"
 import { useUserQuizProgress } from "@nexo/hooks/useUserQuizProgress"
@@ -21,9 +20,9 @@ import {
 } from "@nexo/utils/profile-customization"
 
 export default function Settings() {
-  const { signOut, user, userProfile, refreshUserProfile } = useAuth()
+  const { signOut, user, userId, userProfile, refreshUserProfile } = useAuth()
+  const { showModal, showToast } = useFeedback()
   const router = useRouter()
-  const userId = userProfile?.uid ?? userProfile?.id
   const [displayName, setDisplayName] = useState(userProfile?.displayName ?? "")
   const [isSavingName, setIsSavingName] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -45,7 +44,7 @@ export default function Settings() {
   const selectedAvatarId = userProfile?.selectedAvatarId ?? DEFAULT_AVATAR_ID
   const heroTheme = getThemePreview(selectedThemeId)
   const resolvedEmail = userProfile?.email || user?.email || "Пошта недоступна"
-  const avatarFallback = userProfile?.displayName ?? resolvedEmail ?? "Guest"
+  const avatarFallback = userProfile?.displayName ?? resolvedEmail ?? "Гравець"
   const avatarSeed = getAvatarSeed(selectedAvatarId, avatarFallback)
 
   const ownedThemes = useMemo(
@@ -83,7 +82,11 @@ export default function Settings() {
   async function handleRefresh() {
     try {
       setIsRefreshing(true)
-      await Promise.all([refreshUserProfile(), refetchAchievements(), refetchProgress()])
+      await Promise.all([
+        refreshUserProfile(),
+        refetchAchievements(),
+        refetchProgress(),
+      ])
     } finally {
       setIsRefreshing(false)
     }
@@ -98,27 +101,39 @@ export default function Settings() {
     }
   }
 
-  async function saveDisplayName() {
+  async function saveDisplayName(): Promise<boolean> {
     const trimmed = displayName.trim()
 
-    if (!userId) return
+    if (!userId) return false
 
     if (!trimmed) {
-      Alert.alert("Ім'я порожнє", "Введіть ім'я, яке буде відображатися у профілі.")
-      return
+      showToast({
+        type: "warning",
+        message: "Введіть нікнейм, який буде відображатися у профілі.",
+      })
+      return false
     }
 
     if (trimmed === userProfile?.displayName) {
-      return
+      return true
     }
 
     try {
       setIsSavingName(true)
       await updateUser(userId, { displayName: trimmed })
       await refreshUserProfile()
-      Alert.alert("Профіль оновлено", "Ім'я збережено.")
+      showToast({
+        type: "success",
+        message: "Нікнейм оновлено.",
+      })
+      return true
     } catch (error: any) {
-      Alert.alert("Помилка", error?.message ?? "Не вдалося зберегти ім'я.")
+      showModal({
+        type: "error",
+        title: "Не вдалося зберегти нікнейм",
+        message: error?.message ?? "Спробуйте ще раз трохи пізніше.",
+      })
+      return false
     } finally {
       setIsSavingName(false)
     }
@@ -134,8 +149,16 @@ export default function Settings() {
         type === "theme" ? { selectedThemeId: value } : { selectedAvatarId: value },
       )
       await refreshUserProfile()
+      showToast({
+        type: "success",
+        message: type === "theme" ? "Тему оновлено." : "Аватар оновлено.",
+      })
     } catch (error: any) {
-      Alert.alert("Помилка", error?.message ?? "Не вдалося оновити косметику.")
+      showModal({
+        type: "error",
+        title: "Не вдалося оновити косметику",
+        message: error?.message ?? "Спробуйте ще раз трохи пізніше.",
+      })
     } finally {
       setSavingSelection(null)
     }
@@ -153,14 +176,6 @@ export default function Settings() {
           coins={userProfile?.coins ?? 0}
           streakDays={streakDays}
           selectedAvatarId={selectedAvatarId}
-        />
-
-        <ProfileSection
-          displayName={displayName}
-          email={resolvedEmail}
-          isSavingName={isSavingName}
-          onChangeDisplayName={setDisplayName}
-          onSaveDisplayName={saveDisplayName}
         />
 
         <CosmeticsSection
@@ -188,8 +203,12 @@ export default function Settings() {
         />
 
         <AccountSection
-          canLogout={Boolean(user)}
-          onOpenShop={() => router.push("/shop")}
+          displayName={displayName}
+          savedDisplayName={userProfile?.displayName ?? "Гравець"}
+          isSavingName={isSavingName}
+          onChangeDisplayName={setDisplayName}
+          onSaveDisplayName={saveDisplayName}
+          onCancelDisplayName={() => setDisplayName(userProfile?.displayName ?? "")}
           onLogout={logout}
         />
       </ScreenContent>
