@@ -38,7 +38,7 @@ const ACTIVE_GEAR: ShopItem[] = [
   {
     id: 'hint_reveal',
     name: 'Польова нотатка',
-    description: 'Відкриває пояснення, яке допоможе пригадати матеріал.',
+    description: 'Відкриває коротку нотатку без прямої відповіді.',
     type: 'powerup',
     category: 'gear',
     price: 18,

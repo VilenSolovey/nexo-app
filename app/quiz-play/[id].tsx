@@ -97,8 +97,7 @@ export default function QuizPlayScreen() {
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "_");
 
-  const currentHint =
-    currentQuestion?.hint ?? currentQuestion?.explanation ?? undefined;
+  const currentHint = currentQuestion?.hint ?? undefined;
   const availablePowerUps = React.useMemo(
     () =>
       SHOP_ITEMS.filter((item) => item.type !== "cosmetic")
