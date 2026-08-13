@@ -70,8 +70,8 @@ export function useQuizLaunchSequence() {
 
   const launchMessage = useMemo(() => {
     if (launchProgress < 35) return 'Готуємо питання'
-    if (launchProgress < 72) return 'Збираємо нагороди'
-    if (launchProgress < 100) return 'Запускаємо арену'
+    if (launchProgress < 72) return 'Нестор звіряє фрагменти'
+    if (launchProgress < 100) return 'Відкриваємо виклик'
     return 'Стартуємо'
   }, [launchProgress])
 
