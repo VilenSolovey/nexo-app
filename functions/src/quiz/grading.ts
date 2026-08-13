@@ -3,8 +3,6 @@ import type {ChronicleQuestion} from "../types.js";
 export function buildQuizQuestion(question: ChronicleQuestion) {
   const quizQuestion: Partial<ChronicleQuestion> = {...question};
   delete quizQuestion.chapterId;
-  delete quizQuestion.primaryFragmentId;
-  delete quizQuestion.linkedFragmentIds;
 
   return quizQuestion;
 }

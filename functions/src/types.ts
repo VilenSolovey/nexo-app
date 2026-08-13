@@ -140,7 +140,7 @@ export type ChronicleDiscoveryPayload = {
 
 export type ChronicleProgressionOutcome = {
   nextAction: "discovery_search" | "reconstruction" |
-    "trial" | "chapter_completed" | "none";
+    "trial" | "chapter_completed" | "spark_retry" | "none";
   discovery?: ChronicleDiscoveryPayload;
 };
 

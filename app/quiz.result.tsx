@@ -208,15 +208,19 @@ export default function QuizResultScreen() {
   const boostedCoinsBase = result.baseCoins * result.coinsBoostMultiplier
   const boostedExpBase = result.baseExp * result.expBoostMultiplier
   const chronicleOutcome = result.chronicleOutcome
-  const nestorEvent = !result.passed
+  const chronicleNextAction = chronicleOutcome?.nextAction as string | undefined
+  const isSparkRetryReady = chronicleNextAction === 'spark_retry'
+  const nestorEvent = chronicleNextAction === 'spark_retry'
+    ? 'challenge_retry_ready'
+    : !result.passed
     ? 'challenge_failed'
-    : chronicleOutcome?.nextAction === 'discovery_search'
+    : chronicleNextAction === 'discovery_search'
       ? 'discovery_search_started'
-      : chronicleOutcome?.nextAction === 'reconstruction'
+      : chronicleNextAction === 'reconstruction'
         ? 'reconstruction_ready'
-        : chronicleOutcome?.nextAction === 'trial'
+        : chronicleNextAction === 'trial'
           ? 'trial_ready'
-        : chronicleOutcome?.nextAction === 'chapter_completed'
+        : chronicleNextAction === 'chapter_completed'
             ? 'chapter_completed'
             : 'challenge_passed'
   const nestorDialogue = getNestorDialogue(nestorEvent, {
@@ -274,8 +278,10 @@ export default function QuizResultScreen() {
             <Entrance index={2}>
               <ResultBanner
                 variant="mastered"
-                icon="trophy"
-                text={hasPerfectScore
+                icon={isSparkRetryReady ? 'refresh-circle-outline' : 'trophy'}
+                text={isSparkRetryReady
+                  ? 'Спроби вичерпано. Spark можна створити повторно з Хроніки.'
+                  : hasPerfectScore
                   ? 'Квіз завершено! Набрано 100%.'
                   : `Квіз завершено! Використано ${result.maxAttempts} спроби.`}
               />

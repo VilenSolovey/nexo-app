@@ -3,6 +3,7 @@ import { callAuthenticatedFunction } from '@nexo/services/authenticated-function
 export type CreateChronicleQuizResponse = {
   quizId: string
   alreadyCreated: boolean
+  retried?: boolean
 }
 
 type CreateChronicleQuizInput = {
@@ -21,7 +22,7 @@ type ClaimChronicleDiscoveryInput = {
 }
 
 export type ChronicleProgressionOutcome = {
-  nextAction: 'discovery_search' | 'reconstruction' | 'trial' | 'chapter_completed' | 'none'
+  nextAction: 'discovery_search' | 'reconstruction' | 'trial' | 'chapter_completed' | 'spark_retry' | 'none'
   discovery?: {
     fragmentId: string
     readyAt: string

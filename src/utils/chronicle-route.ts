@@ -149,6 +149,19 @@ export function isChallengeProgressCompleted(
   return progress?.status === 'completed' || progress?.status === 'archived'
 }
 
+export function isChallengeProgressRetryReady(
+  progress: UserChallengeProgress | null | undefined,
+  slot: ChallengeSlot | null | undefined,
+) {
+  if (!progress || !slot || slot.type === 'trial_gate') return false
+  const maxAttempts = Number(progress.maxAttempts ?? slot.maxAttempts ?? 3)
+  const attemptsUsed = Number(progress.attemptsUsed ?? 0)
+  const bestScore = Number(progress.bestScore ?? 0)
+  const passScore = Number(slot.passScore ?? 70)
+
+  return progress.status === 'retry_ready' || (attemptsUsed >= maxAttempts && bestScore < passScore)
+}
+
 export function isChallengeSlotOpen(slot: ChallengeSlot, now = Date.now()) {
   const opensAt = toChronicleDate(slot.opensAt)?.getTime() ?? 0
   const closesAt = toChronicleDate(slot.closesAt)?.getTime() ?? Number.POSITIVE_INFINITY
@@ -229,16 +242,20 @@ export function getActiveChallengeSlot({
   const visibleOpenSlots = trialReady
     ? openSlots
     : openSlots.filter((slot) => slot.type !== 'trial_gate')
+  const isSlotDone = (slot: ChallengeSlot) => {
+    const progress = challengeProgressMap.get(slot.id)
+    return isChallengeProgressCompleted(progress) && !isChallengeProgressRetryReady(progress, slot)
+  }
   const trialSlot = visibleOpenSlots.find((slot) =>
     slot.type === 'trial_gate' &&
-    !isChallengeProgressCompleted(challengeProgressMap.get(slot.id)),
+    !isSlotDone(slot),
   )
   const nextPracticeSlot = visibleOpenSlots.find((slot) =>
     slot.type !== 'trial_gate' &&
-    !isChallengeProgressCompleted(challengeProgressMap.get(slot.id)),
+    !isSlotDone(slot),
   )
   const nextUnfinishedSlot = visibleOpenSlots.find((slot) =>
-    !isChallengeProgressCompleted(challengeProgressMap.get(slot.id)),
+    !isSlotDone(slot),
   )
 
   if (trialReady && trialSlot) return trialSlot
@@ -287,6 +304,7 @@ export function buildChronicleRoute({
 
   const getSlotStatus = (slot: ChallengeSlot): ChronicleRouteStatus => {
     const progress = challengeProgressMap.get(slot.id)
+    if (isChallengeProgressRetryReady(progress, slot)) return 'available'
     if (isChallengeProgressCompleted(progress)) return 'completed'
     if (slot.type === 'trial_gate') return trialReady ? 'trial' : 'locked'
     if (progress?.quizId) return 'created'

@@ -15,6 +15,7 @@ import {
   getChronicleTrialState,
   getSlotStudyFragmentIds,
   isChallengeProgressCompleted,
+  isChallengeProgressRetryReady,
   isChallengeSlotOpen,
   isReconstructionAvailable,
   toChronicleDate,
@@ -106,8 +107,9 @@ export function createChronicleViewModel({
     ? challengeProgressMap.get(activeSlot.id) ?? null
     : null
   const activeSlotOpen = activeSlot ? isChallengeSlotOpen(activeSlot, now) : false
-  const activeSlotCompleted = isChallengeProgressCompleted(activeSlotProgress)
-  const activeSlotAlreadyCreated = Boolean(activeSlotProgress?.quizId)
+  const activeSlotRetryReady = isChallengeProgressRetryReady(activeSlotProgress, activeSlot)
+  const activeSlotCompleted = !activeSlotRetryReady && isChallengeProgressCompleted(activeSlotProgress)
+  const activeSlotAlreadyCreated = Boolean(activeSlotProgress?.quizId) && !activeSlotRetryReady
   const studyFragmentIds = getSlotStudyFragmentIds(activeSlot)
   const activeStudyReady = studyFragmentIds.every(
     (fragmentId) => progressMap.get(fragmentId)?.read,
@@ -169,6 +171,7 @@ export function createChronicleViewModel({
     activeSlotOpen: visibleActiveSlot ? activeSlotOpen : false,
     activeSlotCompleted: visibleActiveSlot ? activeSlotCompleted : false,
     activeSlotAlreadyCreated: visibleActiveSlot ? activeSlotAlreadyCreated : false,
+    activeSlotRetryReady: visibleActiveSlot ? activeSlotRetryReady : false,
     activeStudyReady: visibleActiveSlot ? activeStudyReady : false,
     pendingDiscovery,
     discoveryReady,

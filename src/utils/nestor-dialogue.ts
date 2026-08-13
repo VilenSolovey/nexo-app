@@ -7,6 +7,7 @@ export type NestorEvent =
   | 'trial_ready'
   | 'challenge_passed'
   | 'challenge_failed'
+  | 'challenge_retry_ready'
   | 'discovery_search_started'
   | 'reconstruction_ready'
   | 'discovery_ready'
@@ -67,6 +68,13 @@ export function getNestorDialogue(event: NestorEvent, context: DialogueContext =
       return {
         title: 'Запис ще потребує уточнення',
         message: 'Це нормально: переглянь пояснення до відповідей і спробуй ще раз. Архів нікуди не зникне.',
+        mode: 'spark',
+        mood: 'focused',
+      }
+    case 'challenge_retry_ready':
+      return {
+        title: 'Фрагмент стабілізовано',
+        message: 'Ти вичерпав спроби, але це не кінець. Перечитай теорію, звір пояснення до відповідей і запускай Spark знову — я стабілізував запис для повторної спроби.',
         mode: 'spark',
         mood: 'focused',
       }

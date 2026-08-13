@@ -125,6 +125,36 @@ async function getActiveChapterQuestions(
     .map((doc) => ({id: doc.id, ...doc.data()} as ChronicleQuestion));
 }
 
+function getSafeMaxAttempts(slot: ChallengeSlot, quizType: string): number {
+  return Number(slot.maxAttempts ?? (quizType === "trial" ? 1 : 3));
+}
+
+function isSparkRetryEligible(params: {
+  slot: ChallengeSlot;
+  progress: Record<string, unknown>;
+}): boolean {
+  if (params.slot.type === "trial_gate") return false;
+
+  const maxAttempts = Number(
+    params.progress.maxAttempts ?? params.slot.maxAttempts ?? 3
+  );
+  const attemptsUsed = Number(params.progress.attemptsUsed ?? 0);
+  const bestScore = Number(params.progress.bestScore ?? 0);
+  const passScore = Number(params.slot.passScore ?? 70);
+
+  return params.progress.status === "retry_ready" ||
+    (attemptsUsed >= maxAttempts && bestScore < passScore);
+}
+
+function getChronicleQuizId(params: {
+  slotId: string;
+  userId: string;
+  rerollCount: number;
+}) {
+  const baseId = `chronicle_${params.slotId}_${params.userId}`;
+  return params.rerollCount > 0 ? `${baseId}_r${params.rerollCount}` : baseId;
+}
+
 export async function createChronicleQuizForUser(
   userId: string,
   input: CreateChronicleQuizInput
@@ -145,9 +175,14 @@ export async function createChronicleQuizForUser(
   const progressRef = db.collection("userChallengeProgress")
     .doc(`${userId}_${slotId}`);
   const existingProgress = await progressRef.get();
-  const existingQuizId = existingProgress.data()?.quizId;
+  const existingProgressData = existingProgress.data() ?? {};
+  const existingQuizId = existingProgressData.quizId;
 
-  if (typeof existingQuizId === "string" && existingQuizId.trim()) {
+  if (
+    typeof existingQuizId === "string" &&
+    existingQuizId.trim() &&
+    !isSparkRetryEligible({slot, progress: existingProgressData})
+  ) {
     return {
       quizId: existingQuizId,
       alreadyCreated: true,
@@ -219,9 +254,13 @@ export async function createChronicleQuizForUser(
     targetFragmentIds,
     count,
   });
-  const quizRef = db.collection("quizzes")
-    .doc(`chronicle_${slotId}_${userId}`);
   const quizType = slot.type === "trial_gate" ? "trial" : "spark";
+  const isRetry = isSparkRetryEligible({slot, progress: existingProgressData});
+  const rerollCount = isRetry ?
+    Number(existingProgressData.rerollCount ?? 0) + 1 :
+    Number(existingProgressData.rerollCount ?? 0);
+  const quizRef = db.collection("quizzes")
+    .doc(getChronicleQuizId({slotId, userId, rerollCount}));
 
   if (quizType === "trial") {
     const unlockState = await getTrialUnlockStateForUser(userId, chapterId);
@@ -261,7 +300,8 @@ export async function createChronicleQuizForUser(
     passScore: usesLearningPath ?
       Math.min(Math.max(Number(slot.passScore ?? 70), 1), 100) :
       null,
-    maxAttempts: Number(slot.maxAttempts ?? (quizType === "trial" ? 1 : 3)),
+    maxAttempts: getSafeMaxAttempts(slot, quizType),
+    rerollCount,
     revealPolicy: quizType === "trial" ? "full_after_first" : "staged",
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
@@ -274,7 +314,14 @@ export async function createChronicleQuizForUser(
     quizId: quizRef.id,
     status: "created",
     attemptsUsed: 0,
-    maxAttempts: Number(slot.maxAttempts ?? (quizType === "trial" ? 1 : 3)),
+    maxAttempts: getSafeMaxAttempts(slot, quizType),
+    rerollCount,
+    ...(isRetry ? {
+      previousQuizId: typeof existingQuizId === "string" ?
+        existingQuizId :
+        null,
+      retriedAt: FieldValue.serverTimestamp(),
+    } : {}),
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   }, {merge: true});
@@ -282,5 +329,6 @@ export async function createChronicleQuizForUser(
   return {
     quizId: quizRef.id,
     alreadyCreated: false,
+    retried: isRetry,
   };
 }

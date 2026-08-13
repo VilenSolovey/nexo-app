@@ -166,6 +166,7 @@ export default function ChronicleScreen() {
     activeSlotOpen,
     activeSlotCompleted,
     activeSlotAlreadyCreated,
+    activeSlotRetryReady,
     activeStudyReady,
     pendingDiscovery,
     discoveryReady,
@@ -293,10 +294,10 @@ export default function ChronicleScreen() {
     }
 
     if (!confirmed) {
-      const dialogue = getNestorDialogue(activeSlotIsTrial ? 'trial_ready' : 'spark_ready')
+      const dialogue = getNestorDialogue(activeSlotRetryReady ? 'challenge_retry_ready' : activeSlotIsTrial ? 'trial_ready' : 'spark_ready')
       setNestorPrompt({
         ...dialogue,
-        primaryLabel: activeSlotIsTrial ? 'Створити Trial' : 'Створити Spark',
+        primaryLabel: activeSlotRetryReady ? 'Спробувати ще раз' : activeSlotIsTrial ? 'Створити Trial' : 'Створити Spark',
         onPrimary: () => { void handleStartChallenge(true) },
       })
       return
@@ -316,7 +317,9 @@ export default function ChronicleScreen() {
         type: createdQuiz.alreadyCreated ? 'info' : 'success',
         message: createdQuiz.alreadyCreated
           ? 'Виклик уже чекає на сторінці Вікторини.'
-          : 'Виклик створено. Він зʼявився на сторінці Вікторини.',
+          : createdQuiz.retried
+            ? 'Повторний Spark створено. Він зʼявився на сторінці Вікторини.'
+            : 'Виклик створено. Він зʼявився на сторінці Вікторини.',
       })
     } catch (startError: any) {
       const code = startError?.code ? String(startError.code) : ''
@@ -416,6 +419,8 @@ export default function ChronicleScreen() {
     ? 'Створюємо…'
     : activeSlotCompleted
       ? activeSlotIsTrial ? 'Trial завершено' : 'Очікування наступного виклику'
+      : activeSlotRetryReady
+      ? 'Спробувати ще раз'
       : activeSlotAlreadyCreated
       ? activeSlotIsTrial ? 'Trial уже у вікторинах' : 'Виклик уже у вікторинах'
       : !activeStudyReady
@@ -624,11 +629,15 @@ export default function ChronicleScreen() {
                     <FocusActionTitle>
                       {activeSlotAlreadyCreated
                         ? activeSlotIsTrial ? 'Trial уже готовий' : 'Spark уже готовий'
+                        : activeSlotRetryReady
+                          ? 'Spark можна повторити'
                         : activeSlotIsTrial ? 'Перевір епоху' : 'Закріпи запис'}
                     </FocusActionTitle>
                     <FocusActionText>
                       {activeSlotAlreadyCreated
                         ? 'Виклик чекає у Вікторинах.'
+                        : activeSlotRetryReady
+                          ? 'Нестор стабілізував фрагмент. Перечитай теорію й створи нову спробу.'
                         : activeSlotIsTrial
                           ? 'Збери епоху в одну картину.'
                           : 'Теорію прочитано — час перевірити себе.'}
@@ -642,7 +651,7 @@ export default function ChronicleScreen() {
                     void handleStartChallenge()
                   }}>
                     <Ionicons name={activeSlotAlreadyCreated ? 'arrow-forward' : 'flash-outline'} size={17} color={Theme.background} />
-                    <FocusActionButtonText>{activeSlotAlreadyCreated ? 'До квізів' : activeSlotIsTrial ? 'Trial' : 'Spark'}</FocusActionButtonText>
+                    <FocusActionButtonText>{activeSlotAlreadyCreated ? 'До квізів' : activeSlotRetryReady ? 'Ще раз' : activeSlotIsTrial ? 'Trial' : 'Spark'}</FocusActionButtonText>
                   </FocusActionButton>
                 </FocusActionCard>
               )}

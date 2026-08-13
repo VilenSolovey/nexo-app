@@ -2,9 +2,9 @@ import styled from 'styled-components/native';
 
 export const Card = styled.View`
   background-color: ${({ theme }) => theme.cardBackground};
-  border-radius: 24px;
-  padding: 24px;
-  margin-bottom: 24px;
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 18px;
   border-width: 1px;
   border-color: ${({ theme }) => theme.cardBorder};
   shadow-color: #000;
@@ -15,7 +15,7 @@ export const Card = styled.View`
 `;
 
 export const CardHeader = styled.View`
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 `;
 
 export const TypeChip = styled.View`
@@ -40,9 +40,9 @@ export const TypeChipText = styled.Text`
 `;
 
 export const QuestionText = styled.Text`
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 750;
   color: ${({ theme }) => theme.text};
-  line-height: 36px;
-  letter-spacing: -0.3px;
+  line-height: 27px;
+  letter-spacing: -0.1px;
 `;

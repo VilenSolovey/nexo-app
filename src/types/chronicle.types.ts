@@ -156,9 +156,11 @@ export type UserChallengeProgress = {
   chapterId: string
   slotId: string
   quizId: string
-  status: 'created' | 'in_progress' | 'completed' | 'archived'
+  status: 'created' | 'in_progress' | 'retry_ready' | 'completed' | 'archived'
   attemptsUsed: number
   maxAttempts: number
+  rerollCount?: number
+  previousQuizId?: string | null
   bestScore?: number
   lastScore?: number
   lastSessionId?: string | null

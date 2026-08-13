@@ -150,6 +150,9 @@ export async function recordChronicleQuizAttemptForUser(
 
   for (const question of questions) {
     const questionId = question.sourceQuestionId ?? question.id;
+    const primaryFragmentId = typeof question.primaryFragmentId === "string" ?
+      question.primaryFragmentId.trim() :
+      "";
     const userAnswer = answers[question.id] ?? answers[questionId];
     const correct = isCorrectAnswer(question, userAnswer);
     const previousStats = previousStatsByQuestionId.get(
@@ -170,7 +173,9 @@ export async function recordChronicleQuizAttemptForUser(
 
     const linkedFragmentIds = question.linkedFragmentIds?.length ?
       question.linkedFragmentIds :
-      [question.primaryFragmentId];
+      primaryFragmentId ?
+        [primaryFragmentId] :
+        [];
 
     const cleanFragmentIds = linkedFragmentIds.filter((fragmentId) =>
       typeof fragmentId === "string" && fragmentId.trim()
@@ -183,7 +188,7 @@ export async function recordChronicleQuizAttemptForUser(
       userId,
       questionId,
       chapterId,
-      primaryFragmentId: question.primaryFragmentId,
+      ...(primaryFragmentId ? {primaryFragmentId} : {}),
       linkedFragmentIds: cleanFragmentIds,
       attempts: FieldValue.increment(1),
       correct: FieldValue.increment(correct ? 1 : 0),
@@ -269,14 +274,27 @@ export async function recordChronicleQuizAttemptForUser(
     };
   }
   const bestScore = Math.max(Number(progress.bestScore ?? 0), percentage);
-  const completed = passed || attemptNumber >= maxAttempts;
+  const attemptsExhausted = attemptNumber >= maxAttempts;
+  const sparkRetryReady = learningPathQuiz &&
+    quiz.type === "spark" &&
+    !passed &&
+    attemptsExhausted;
+  const completed = passed || attemptsExhausted;
+
+  if (sparkRetryReady) {
+    progressionOutcome = {nextAction: "spark_retry"};
+  }
 
   batch.set(progressRef, {
     userId,
     chapterId,
     slotId,
     quizId,
-    status: completed ? "completed" : "in_progress",
+    status: passed || (attemptsExhausted && quiz.type !== "spark") ?
+      "completed" :
+      sparkRetryReady ?
+        "retry_ready" :
+        "in_progress",
     attemptsUsed: attemptNumber,
     maxAttempts,
     bestScore,
