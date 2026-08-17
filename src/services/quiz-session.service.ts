@@ -13,18 +13,6 @@ export interface StartQuizSessionParams {
   quizId: string
 }
 
-export interface CompleteQuizSessionParams {
-  sessionId: string
-  score: number
-  total: number
-  timeSpent: number
-  passed: boolean
-  timeExpired: boolean
-  quitEarly: boolean
-  backgroundCount: number
-  backgroundDurationMs: number
-}
-
 export async function startQuizSession(
   params: StartQuizSessionParams,
 ): Promise<string> {
@@ -66,38 +54,6 @@ export async function markQuizSessionForeground(
     currentAppState: 'active',
     backgroundDurationMs: increment(Math.max(backgroundDurationMs, 0)),
     lastReturnedToForegroundAt: serverTimestamp(),
-    lastActivityAt: serverTimestamp(),
-  })
-}
-
-export async function completeQuizSession(
-  params: CompleteQuizSessionParams,
-): Promise<void> {
-  const {
-    sessionId,
-    score,
-    total,
-    timeSpent,
-    passed,
-    timeExpired,
-    quitEarly,
-    backgroundCount,
-    backgroundDurationMs,
-  } = params
-
-  await updateDoc(doc(db, 'quizSessions', sessionId), {
-    status: 'completed',
-    currentAppState: 'completed',
-    score,
-    total,
-    timeSpent,
-    passed,
-    timeExpired,
-    quitEarly,
-    backgroundCount,
-    backgroundDurationMs,
-    leftAppDuringQuiz: backgroundCount > 0,
-    completedAt: serverTimestamp(),
     lastActivityAt: serverTimestamp(),
   })
 }

@@ -1,128 +1,81 @@
-import React, { useMemo, useState } from "react"
-import * as Haptics from "expo-haptics"
+import React, { useCallback, useMemo, useState } from "react"
 import { useRouter } from "expo-router"
-import { useFocusEffect } from "@react-navigation/native"
 import { UserContainer, Paragraph } from "@nexo/components/Home/HomeLayout"
-import { Banner } from "@nexo/components/Home/Banner/Banner"
-import { LevelProgressCard } from "@nexo/components/Home/LevelProgressCard/LevelProgressCard"
 import { UserHeader } from "@nexo/components/Home/UserHeader/UserHeader"
-import { StreakCard } from "@nexo/components/Home/StreakCard/StreakCard"
 import { MiniGameOfDay } from "@nexo/components/Home/MiniGameOfDay/MiniGameOfDay"
-import { NewsSection } from "@nexo/components/Home/NewSection/NewsSection"
+import { ProgressOverview } from "@nexo/components/Home/ProgressOverview/ProgressOverview"
 import { RecentSection } from "@nexo/components/Home/RecentSection/RecentSection"
+import { TodayFocus } from "@nexo/components/Home/TodayFocus/TodayFocus"
+import { Entrance } from "@nexo/components/Motion/Entrance"
 import { RefreshableScreen } from "@nexo/components/RefreshableScreen"
 import { useAuth } from "@nexo/contexts/AuthProvider"
 import { useAllQuizzes } from "@nexo/hooks/useAllQuizzes"
+import { useHomeChronicleFocus } from "@nexo/hooks/useHomeChronicleFocus"
+import { useRefreshOnReturn } from "@nexo/hooks/useRefreshOnReturn"
 import { useUserQuizProgress } from "@nexo/hooks/useUserQuizProgress"
-import { registerDailyActivity } from "@nexo/services/user.service"
-import type { NewsItem, RecentItem } from "@nexo/types/quiz.types"
-import type { UserQuizProgress } from "@nexo/types/result.types"
+import { useUserQuizResults } from "@nexo/hooks/useUserQuizResults"
 import { getAvatarSeed } from "@nexo/utils/profile-customization"
-import { isQuizRecent, toMillis } from "@nexo/utils/quiz-progress"
-
-function joinRecentQuizzes(
-  quizzes: NewsItem[],
-  progressList: UserQuizProgress[]
-): RecentItem[] {
-  const progressIndex = new Map(progressList.map(progress => [progress.quizId, progress]))
-
-  return quizzes
-    .filter((quiz) => isQuizRecent({
-      progress: progressIndex.get(quiz.id),
-      createdAt: quiz.createdAt,
-    }))
-    .sort((a, b) => {
-      const aProgress = progressIndex.get(a.id)
-      const bProgress = progressIndex.get(b.id)
-      const aTime = toMillis(aProgress?.lastPlayedAt) ?? toMillis(a.createdAt) ?? 0
-      const bTime = toMillis(bProgress?.lastPlayedAt) ?? toMillis(b.createdAt) ?? 0
-      return bTime - aTime
-    })
-    .slice(0, 3)
-    .map((quiz) => {
-      const progress = progressIndex.get(quiz.id)
-      const completedAtMs = toMillis(progress?.lastPlayedAt) ?? toMillis(quiz.createdAt) ?? Date.now()
-
-      return {
-        ...quiz,
-        completedAt: Math.floor(completedAtMs / 1000),
-        score: progress?.officialScore ?? progress?.bestScore ?? 0,
-        total: quiz.questionsCount,
-      }
-    })
-    .filter((item): item is RecentItem => item !== null)
-}
+import { toCompletedQuizItems } from "@nexo/utils/quiz-history"
 
 
 export default function HomeScreen() {
   const router = useRouter()
-  const { userProfile, loading: authLoading, refreshUserProfile } = useAuth()
-  const userId = userProfile?.uid ?? userProfile?.id
-  const { quizzes, loading: quizzesLoading, error, refetch: refetchQuizzes } = useAllQuizzes()
-  const { progressList, progressMap, loading: progressLoading, refetch: refetchProgress } = useUserQuizProgress(userId)
+  const { userId, userProfile, refreshUserProfile } = useAuth()
+  const { quizzes, loading: quizzesLoading, error: quizzesError, refetch: refetchQuizzes } = useAllQuizzes(userId)
+  const {
+    progressList,
+    loading: progressLoading,
+    error: progressError,
+    refetch: refetchProgress,
+  } = useUserQuizProgress(userId)
+  const {
+    results,
+    loading: resultsLoading,
+    error: resultsError,
+    refetch: refetchResults,
+  } = useUserQuizResults(userId)
+  const { focus: chronicleFocus, refresh: refreshChronicleFocus } = useHomeChronicleFocus(userId)
   const [isRefreshing, setIsRefreshing] = useState(false)
   
   const pullToRefresh = async () => {
     setIsRefreshing(true)
     try {
       await Promise.all([
-        refetchQuizzes?.(),
-        refetchProgress?.(),
+        refreshUserProfile(),
+        refetchQuizzes(),
+        refetchProgress(),
+        refetchResults(),
+        refreshChronicleFocus(),
       ])
     } finally {
       setIsRefreshing(false)
     }
   } 
   
-  const news = useMemo(
-    () => quizzes
-      .filter((quiz) => !isQuizRecent({
-        progress: progressMap.get(quiz.id),
-        createdAt: quiz.createdAt,
-      }))
-      .slice(0, 5),
-    [progressMap, quizzes]
-  )
-
   const recent = useMemo(
-    () => joinRecentQuizzes(quizzes, progressList),
-    [quizzes, progressList]
+    () => toCompletedQuizItems(quizzes, progressList, results, 3),
+    [quizzes, progressList, results]
   ) 
 
-  const loading = authLoading || quizzesLoading || progressLoading
+  const loading = quizzesLoading || progressLoading || resultsLoading
+  const error = quizzesError ?? progressError ?? resultsError
   const streakDays = userProfile?.streakDays ?? userProfile?.streak ?? 0
+  const displayName = userProfile?.displayName ?? 'Гравець'
   const avatarSeed = getAvatarSeed(
     userProfile?.selectedAvatarId,
-    userProfile?.displayName ?? userProfile?.email ?? "Guest",
+    displayName,
   )
 
-  useFocusEffect(
-    React.useCallback(() => {
-      let cancelled = false
-
-      const syncDailyProgress = async () => {
-        if (userId) {
-          try {
-            const result = await registerDailyActivity(userId)
-            if (result.changed && !cancelled) {
-              await refreshUserProfile()
-            }
-          } catch (error) {
-            console.error("Failed to register daily activity:", error)
-          }
-        }
-
-        refetchProgress()
-        refetchQuizzes()
-      }
-
-      syncDailyProgress()
-
-      return () => {
-        cancelled = true
-      }
-    }, [refreshUserProfile, refetchProgress, refetchQuizzes, userId]),
+  const refreshOnReturn = useCallback(
+    () => Promise.all([
+      refetchProgress(),
+      refetchQuizzes(),
+      refetchResults(),
+      refreshChronicleFocus(),
+    ]),
+    [refreshChronicleFocus, refetchProgress, refetchQuizzes, refetchResults],
   )
+  useRefreshOnReturn(refreshOnReturn)
 
   return (
     <>
@@ -131,51 +84,50 @@ export default function HomeScreen() {
         refreshing={isRefreshing}
         contentContainerStyle={{ paddingBottom: 220 }}
       >
-        <UserContainer>
-          <UserHeader
-            name={userProfile?.displayName ?? "Guest"}
-            coins={userProfile?.coins ?? 0}
-            level={userProfile?.level ?? 1}
-            avatarSeed={avatarSeed}
+        <Entrance index={0}>
+          <UserContainer>
+            <UserHeader
+              name={displayName}
+              coins={userProfile?.coins ?? 0}
+              avatarSeed={avatarSeed}
+              onPressShop={() => router.push("/shop")}
+            />
+          </UserContainer>
+        </Entrance>
+
+        <Entrance index={1} variant="hero">
+          <TodayFocus
+            focus={chronicleFocus}
+            onPress={() => {
+              router.push({
+                pathname: "/chronicle",
+                params: { focusChallenge: "active" },
+              } as any)
+            }}
           />
-        </UserContainer>
+        </Entrance>
 
-        <LevelProgressCard
-          level={userProfile?.level ?? 1}
-          exp={userProfile?.exp ?? 0}
-        />
-
-        <Banner />
-
-        <StreakCard streakDays={streakDays} />
-
-        <NewsSection
-          items={news}
-          onSeeAll={() => {
-            Haptics.selectionAsync()
-            router.push("/quiz")
-          }}
-          onPressItem={() => {
-            Haptics.selectionAsync()
-          }}
-        />
+        <Entrance index={2}>
+          <ProgressOverview
+            level={userProfile?.level ?? 1}
+            exp={userProfile?.exp ?? 0}
+            streakDays={streakDays}
+          />
+        </Entrance>
 
         {loading ? (
           <Paragraph>Завантажується…</Paragraph>
         ) : error ? (
           <Paragraph>Помилка: {error}</Paragraph>
         ) : (
-          <RecentSection
-            items={recent}
-            onSeeAll={() => {
-              Haptics.selectionAsync()
-              router.push("/quiz")
-            }}
-            onPressItem={() => {
-              Haptics.selectionAsync()
-            }}
-          />
+          <Entrance index={3}>
+            <RecentSection
+              items={recent}
+              onSeeAll={() => router.push('/history')}
+            />
+          </Entrance>
         )}
+
       </RefreshableScreen>
 
       <MiniGameOfDay />

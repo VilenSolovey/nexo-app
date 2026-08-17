@@ -3,6 +3,7 @@ import { Pressable } from "react-native"
 import * as Haptics from "expo-haptics"
 import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import Animated from "react-native-reanimated"
 import { MiniGameModal, type MiniGameFinishPayload } from "@nexo/components/Home/MiniGameOfDay/MiniGameModal"
 import {
   DebugResetButton,
@@ -18,6 +19,7 @@ import {
   FloatingButtonTitle,
   FloatingWrap,
 } from "@nexo/components/Home/MiniGameOfDay/MiniGameOfDay.styled"
+import { useMiniGameButtonMotion } from "@nexo/components/Home/MiniGameOfDay/useMiniGameButtonMotion"
 import { useAuth } from "@nexo/contexts/AuthProvider"
 import { applyUserRewards } from "@nexo/services/user.service"
 import {
@@ -29,6 +31,9 @@ import {
   type DailyMiniGameResult,
 } from "@nexo/utils/daily-mini-game"
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+const AnimatedAccent = Animated.createAnimatedComponent(FloatingButtonAccent)
+
 export function MiniGameOfDay() {
   const insets = useSafeAreaInsets()
   const { userProfile, refreshUserProfile } = useAuth()
@@ -37,6 +42,12 @@ export function MiniGameOfDay() {
   const todayKey = getMiniGameDateKey()
   const [visible, setVisible] = useState(false)
   const [storedResult, setStoredResult] = useState<DailyMiniGameResult | null>(null)
+  const {
+    accentStyle,
+    floatingStyle,
+    handlePressIn,
+    handlePressOut,
+  } = useMiniGameButtonMotion()
 
   useEffect(() => {
     let active = true
@@ -121,14 +132,14 @@ export function MiniGameOfDay() {
   return (
     <>
       <FloatingWrap pointerEvents="box-none" $bottomOffset={insets.bottom + 92}>
-        <Pressable
+        <AnimatedPressable
           onPress={handleOpen}
-          style={({ pressed }) => ({
-            transform: [{ scale: pressed ? 0.97 : 1 }],
-          })}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          style={floatingStyle}
         >
           <FloatingButton>
-            <FloatingButtonAccent $accent={todayGame.accent} />
+            <AnimatedAccent $accent={todayGame.accent} style={accentStyle} />
 
             <FloatingButtonHeader>
               <FloatingButtonEmoji>{todayGame.emoji}</FloatingButtonEmoji>
@@ -146,7 +157,7 @@ export function MiniGameOfDay() {
               <FloatingButtonSubtitle>{statusText}</FloatingButtonSubtitle>
             </FloatingButtonStatus>
           </FloatingButton>
-        </Pressable>
+        </AnimatedPressable>
 
         {__DEV__ && (
           <DebugResetButton onPress={handleDebugReset}>

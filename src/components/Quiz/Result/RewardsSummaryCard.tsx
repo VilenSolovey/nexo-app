@@ -1,6 +1,7 @@
 import React from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { Theme } from '@nexo/constants/theme'
+import { NexonsIcon } from '@nexo/components/Currency/NexonsIcon'
 import {
   RewardsCard,
   RewardsTitle,
@@ -35,7 +36,7 @@ export function RewardsSummaryCard({
       )}
       <RewardsContainer>
         <RewardItem>
-          <Ionicons name="cash" size={32} color={Theme.coin} />
+          <NexonsIcon size={36} />
           <RewardValue>+{coins}</RewardValue>
           {isReducedReward && <RewardOriginal>з {originalCoins}</RewardOriginal>}
           <RewardLabel>Nexons</RewardLabel>

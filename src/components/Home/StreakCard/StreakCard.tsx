@@ -43,7 +43,7 @@ export const StreakCard: React.FC<Props> = ({ streakDays = 0 }) => {
   return (
     <StreakBanner>
       <StreakCopy>
-        <StreakEyebrow>DAILY STREAK</StreakEyebrow>
+        <StreakEyebrow>ЩОДЕННА СЕРІЯ</StreakEyebrow>
 
         <StreakHeaderRow>
           <StreakEmojiWrap>

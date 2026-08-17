@@ -1,5 +1,6 @@
 import React from "react"
 import { Ionicons } from "@expo/vector-icons"
+import { NexonsIcon } from "@nexo/components/Currency/NexonsIcon"
 import { Avatar } from "@nexo/components/Home/Avatar"
 import type { ThemeOption } from "@nexo/constants/themes"
 import { useAppTheme } from "@nexo/contexts/AppThemeProvider"
@@ -67,15 +68,15 @@ export function SettingsHero({
       <HeroStatsRow>
         <HeroStatPill>
           <Ionicons name="flash-outline" size={16} color={Theme.exp} />
-          <HeroStatValue>Lv {level}</HeroStatValue>
+          <HeroStatValue>Рівень {level}</HeroStatValue>
         </HeroStatPill>
         <HeroStatPill>
-          <Ionicons name="cash-outline" size={16} color={Theme.coin} />
+          <NexonsIcon size={19} />
           <HeroStatValue>{coins}</HeroStatValue>
         </HeroStatPill>
         <HeroStatPill>
           <Ionicons name="flame-outline" size={16} color={Theme.warning} />
-          <HeroStatValue>{streakDays}</HeroStatValue>
+          <HeroStatValue>{streakDays} дн.</HeroStatValue>
         </HeroStatPill>
       </HeroStatsRow>
     </HeroCard>

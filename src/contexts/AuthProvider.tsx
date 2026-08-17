@@ -1,34 +1,85 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
-import { Theme } from '@nexo/constants/theme';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type { User } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
+import { doc, setDoc, getDoc, getDocFromCache, onSnapshot, updateDoc } from 'firebase/firestore';
+import { LevelUpModal } from '@nexo/components/LevelUpModal/LevelUpModal';
 import { auth, db } from '@nexo/services/firebase';
+import { useDailyActivitySync } from '@nexo/hooks/useDailyActivitySync';
 import { UserProfile } from '@nexo/types/user.types';
-import { getLevelFromExp } from '@nexo/utils/level';
+import { normalizeUserProfile } from '@nexo/utils/user-profile';
+
+type RefreshUserProfileOptions = {
+  showLevelUp?: boolean;
+}
 
 interface AuthContextType {
   user: User | null;
+  userId: string | undefined;
   userProfile: UserProfile | null;
+  status: AuthStatus;
   loading: boolean;
+  profileError: string | null;
   signInEmail: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
-  refreshUserProfile: () => Promise<void>;
+  refreshUserProfile: (options?: RefreshUserProfileOptions) => Promise<void>;
+  retryProfile: () => Promise<void>;
 }
 
+export type AuthStatus =
+  | 'restoring'
+  | 'loading-profile'
+  | 'authenticated'
+  | 'unauthenticated'
+  | 'profile-error'
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function debugAuth(message: string, payload?: Record<string, unknown>) {
+  if (__DEV__) {
+    console.log(`[AuthProvider] ${message}`, payload ?? '')
+  }
+}
+
+const PROFILE_RETRY_DELAYS = [0, 250, 800]
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function profileErrorMessage(error: unknown) {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = String((error as { message?: unknown }).message ?? '').trim()
+    if (message) return message
+  }
+  return 'Не вдалося завантажити профіль. Перевірте інтернет і спробуйте ще раз.'
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<AuthStatus>('restoring');
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [levelUpState, setLevelUpState] = useState<{ previousLevel: number; nextLevel: number } | null>(null);
-  const hasHydratedProfileRef = useRef(false);
-  const lastLevelRef = useRef<number | null>(null);
+  const userRef = useRef<User | null>(null);
+  const userProfileRef = useRef<UserProfile | null>(null);
+  const profileListenerRef = useRef<(() => void) | null>(null);
+  const profileRequestRef = useRef(0);
+  const pendingSignUpRef = useRef<{ email: string; displayName: string } | null>(null);
+  const dailySyncKeyRef = useRef<string | null>(null);
+  const dailySyncInFlightRef = useRef(false);
+  const userId = user?.uid ?? userProfile?.uid ?? userProfile?.id;
+  const loading = status === 'restoring' || status === 'loading-profile';
 
-  const createUserProfile = async (uid: string, email: string, displayName: string) => {
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+
+  useEffect(() => {
+    userProfileRef.current = userProfile
+  }, [userProfile])
+
+  const createUserProfile = useCallback(async (uid: string, email: string, displayName: string) => {
     const now = new Date().toISOString();
     const profile: UserProfile = {
       id: uid,
@@ -39,6 +90,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       exp: 0,
       level: 1,
       streak: 0,
+      streakDays: 0,
+      longestStreak: 0,
       completedQuizzes: [],
       achievements: [],
       inventory: [],
@@ -47,147 +100,257 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: now,
     };
 
-    await setDoc(doc(db, 'users', uid), profile);
+    await setDoc(doc(db, 'users', uid), profile, { merge: true });
     return profile;
-  };
-
-  const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
-    const docRef = doc(db, 'users', uid);
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      const data = docSnap.data() as UserProfile
-      const exp = Number(data.exp ?? 0)
-      const normalizedLevel = getLevelFromExp(exp)
-      const storedLevel = Number(data.level ?? 1)
-      const storedEmail = typeof data.email === 'string' ? data.email.trim() : ''
-      const fallbackEmail = auth.currentUser?.email?.trim() ?? ''
-      const resolvedEmail = storedEmail || fallbackEmail
-      const profileUpdates: Partial<UserProfile> = {}
-
-      if (normalizedLevel !== storedLevel) {
-        profileUpdates.level = normalizedLevel
-      }
-
-      if (!storedEmail && fallbackEmail) {
-        profileUpdates.email = fallbackEmail
-      }
-
-      if (Object.keys(profileUpdates).length > 0) {
-        await updateDoc(docRef, profileUpdates)
-      }
-
-      return {
-        ...data,
-        id: uid,
-        uid,
-        email: resolvedEmail,
-        consumables:
-          typeof data.consumables === 'object' && data.consumables !== null
-            ? Object.fromEntries(
-                Object.entries(data.consumables).map(([key, value]) => [key, Number(value ?? 0)]),
-              )
-            : {},
-        exp,
-        level: normalizedLevel,
-      };
-    }
-    return null;
-  };
-
-  const refreshUserProfile = async () => {
-    if (user) {
-      const profile = await fetchUserProfile(user.uid);
-      setUserProfile(profile);
-    }
-  };
-
-  useEffect(() => {
-    if (!userProfile) {
-      hasHydratedProfileRef.current = false
-      lastLevelRef.current = null
-      return
-    }
-
-    const currentLevel = Number(userProfile.level ?? 1)
-
-    if (!hasHydratedProfileRef.current) {
-      hasHydratedProfileRef.current = true
-      lastLevelRef.current = currentLevel
-      return
-    }
-
-    const previousLevel = lastLevelRef.current ?? currentLevel
-
-    if (currentLevel > previousLevel) {
-      setLevelUpState({
-        previousLevel,
-        nextLevel: currentLevel,
-      })
-    }
-
-    lastLevelRef.current = currentLevel
-  }, [userProfile])
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      
-      if (user) {
-        let profile = await fetchUserProfile(user.uid);
-        if (!profile) {
-          profile = await createUserProfile(user.uid, user.email || '', user.displayName || 'User');
-        }
-        setUserProfile(profile);
-      } else {
-        setUserProfile(null);
-      }
-      
-      setLoading(false);
-    });
-
-    return unsubscribe;
   }, []);
 
-  const signInEmail = async (email: string, password: string) => {
+  const fetchUserProfile = useCallback(async (firebaseUser: User): Promise<UserProfile | null> => {
+    const uid = firebaseUser.uid
+    const docRef = doc(db, 'users', uid);
+    let lastError: unknown
+
+    for (const retryDelay of PROFILE_RETRY_DELAYS) {
+      if (retryDelay > 0) await delay(retryDelay)
+
+      try {
+        const docSnap = await getDoc(docRef)
+        if (!docSnap.exists()) return null
+
+        const raw = docSnap.data() as Record<string, unknown>
+        const profile = normalizeUserProfile(uid, raw, firebaseUser)
+        const profileUpdates: Partial<UserProfile> = {}
+
+        if (raw.displayName !== profile.displayName) profileUpdates.displayName = profile.displayName
+        if (raw.email !== profile.email && profile.email) profileUpdates.email = profile.email
+        if (Number(raw.level ?? 1) !== profile.level) profileUpdates.level = profile.level
+
+        if (Object.keys(profileUpdates).length > 0) {
+          await updateDoc(docRef, profileUpdates)
+        }
+
+        return profile
+      } catch (error) {
+        lastError = error
+      }
+    }
+
+    try {
+      const cachedSnap = await getDocFromCache(docRef)
+      if (cachedSnap.exists()) {
+        debugAuth('using cached profile after Firestore error', { uid })
+        return normalizeUserProfile(uid, cachedSnap.data() as Record<string, unknown>, firebaseUser)
+      }
+    } catch {
+      // The original Firestore error below is more useful than a cache miss.
+    }
+
+    throw lastError ?? new Error('User profile could not be loaded')
+  }, []);
+
+  const commitProfile = useCallback((profile: UserProfile) => {
+    userProfileRef.current = profile
+    setUserProfile(profile)
+    setProfileError(null)
+    setStatus('authenticated')
+  }, [])
+
+  const startProfileListener = useCallback((firebaseUser: User) => {
+    profileListenerRef.current?.()
+    profileListenerRef.current = onSnapshot(
+      doc(db, 'users', firebaseUser.uid),
+      (snapshot) => {
+        if (auth.currentUser?.uid !== firebaseUser.uid || !snapshot.exists()) return
+        commitProfile(normalizeUserProfile(
+          firebaseUser.uid,
+          snapshot.data() as Record<string, unknown>,
+          firebaseUser,
+        ))
+      },
+      (error) => {
+        console.error('User profile listener failed:', error)
+        // Keep the last valid profile visible. A listener failure is not logout.
+        setProfileError(profileErrorMessage(error))
+      },
+    )
+  }, [commitProfile])
+
+  const resolveUserProfile = useCallback(async (firebaseUser: User) => {
+    const requestId = profileRequestRef.current + 1
+    profileRequestRef.current = requestId
+    setStatus('loading-profile')
+    setProfileError(null)
+
+    try {
+      let profile = await fetchUserProfile(firebaseUser)
+      if (requestId !== profileRequestRef.current || auth.currentUser?.uid !== firebaseUser.uid) return
+
+      if (!profile) {
+        const pending = pendingSignUpRef.current
+        profile = await createUserProfile(
+          firebaseUser.uid,
+          pending?.email || firebaseUser.email || '',
+          pending?.displayName || firebaseUser.displayName || 'Гравець',
+        )
+      }
+
+      if (requestId !== profileRequestRef.current || auth.currentUser?.uid !== firebaseUser.uid) return
+
+      debugAuth('auth profile loaded', {
+        uid: firebaseUser.uid,
+        level: profile.level,
+        exp: profile.exp,
+      })
+      commitProfile(profile)
+      startProfileListener(firebaseUser)
+    } catch (error) {
+      if (requestId !== profileRequestRef.current) return
+      console.error('Failed to resolve auth profile:', error)
+
+      // A temporary read error must not erase a profile that was already valid.
+      if (userProfileRef.current?.id === firebaseUser.uid) {
+        setProfileError(profileErrorMessage(error))
+        setStatus('authenticated')
+        return
+      }
+
+      setProfileError(profileErrorMessage(error))
+      setStatus('profile-error')
+    }
+  }, [commitProfile, createUserProfile, fetchUserProfile, startProfileListener])
+
+  const refreshUserProfile = useCallback(async (options: RefreshUserProfileOptions = {}) => {
+    const currentUser = userRef.current ?? user
+
+    if (currentUser) {
+      const previousProfile = userProfileRef.current
+      const profile = await fetchUserProfile(currentUser);
+      if (!profile) throw new Error('User profile not found')
+
+      debugAuth('refreshUserProfile', {
+        showLevelUp: Boolean(options.showLevelUp),
+        previousLevel: previousProfile?.level ?? null,
+        nextLevel: profile?.level ?? null,
+      })
+
+      if (options.showLevelUp && previousProfile && profile) {
+        const previousLevel = Number(previousProfile.level ?? 1)
+        const nextLevel = Number(profile.level ?? 1)
+
+        if (nextLevel > previousLevel) {
+          debugAuth('show level-up modal', {
+            previousLevel,
+            nextLevel,
+          })
+
+          setLevelUpState({
+            previousLevel,
+            nextLevel,
+          })
+        }
+      }
+
+      commitProfile(profile)
+    }
+  }, [commitProfile, fetchUserProfile, user]);
+
+  const retryProfile = useCallback(async () => {
+    const currentUser = auth.currentUser ?? userRef.current
+    if (!currentUser) {
+      setStatus('unauthenticated')
+      return
+    }
+    await resolveUserProfile(currentUser)
+  }, [resolveUserProfile])
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      profileRequestRef.current += 1
+      profileListenerRef.current?.()
+      profileListenerRef.current = null
+      userRef.current = nextUser
+      setUser(nextUser)
+
+      if (nextUser) {
+        if (userProfileRef.current?.id !== nextUser.uid) {
+          userProfileRef.current = null
+          setUserProfile(null)
+        }
+        void resolveUserProfile(nextUser)
+      } else {
+        dailySyncKeyRef.current = null
+        setStatus('unauthenticated')
+        setProfileError(null)
+        userProfileRef.current = null;
+        setUserProfile(null);
+        setLevelUpState(null);
+      }
+    });
+
+    return () => {
+      profileRequestRef.current += 1
+      profileListenerRef.current?.()
+      unsubscribe()
+    };
+  }, [resolveUserProfile]);
+
+  useDailyActivitySync({
+    status,
+    userProfile,
+    userRef,
+    userProfileRef,
+    dailySyncKeyRef,
+    dailySyncInFlightRef,
+    setUserProfile,
+  })
+
+  const signInEmail = useCallback(async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string, displayName: string) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    await createUserProfile(userCredential.user.uid, email, displayName);
-  };
+  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
+    pendingSignUpRef.current = { email, displayName }
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await createUserProfile(userCredential.user.uid, email, displayName);
+    } finally {
+      pendingSignUpRef.current = null
+    }
+  }, [createUserProfile]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
-  };
+  }, []);
+
+  const contextValue = useMemo<AuthContextType>(() => ({
+    user,
+    userId,
+    userProfile,
+    status,
+    loading,
+    profileError,
+    signInEmail,
+    signUp,
+    signOut,
+    refreshUserProfile,
+    retryProfile,
+  }), [
+    loading,
+    profileError,
+    refreshUserProfile,
+    retryProfile,
+    signInEmail,
+    signOut,
+    signUp,
+    status,
+    user,
+    userId,
+    userProfile,
+  ])
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, signInEmail, signUp, signOut, refreshUserProfile }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
-
-      <Modal
-        visible={Boolean(levelUpState)}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setLevelUpState(null)}
-      >
-        <View style={styles.overlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.iconWrap}>
-              <Ionicons name="sparkles" size={28} color={Theme.exp} />
-            </View>
-            <Text style={styles.title}>Новий рівень!</Text>
-            <Text style={styles.levelText}>Lv {levelUpState?.nextLevel ?? 1}</Text>
-            <Text style={styles.subtitle}>
-              Ви піднялися з Lv {levelUpState?.previousLevel ?? 1} на Lv {levelUpState?.nextLevel ?? 1}
-            </Text>
-            <Pressable style={styles.button} onPress={() => setLevelUpState(null)}>
-              <Text style={styles.buttonText}>Круто</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      <LevelUpModal levelUp={levelUpState} onClose={() => setLevelUpState(null)} />
     </AuthContext.Provider>
   );
 };
@@ -199,67 +362,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(9, 14, 12, 0.68)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 360,
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-    backgroundColor: Theme.card,
-    borderWidth: 1,
-    borderColor: '#5B4A8A',
-  },
-  iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(139, 92, 246, 0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.26)',
-  },
-  title: {
-    marginTop: 16,
-    color: Theme.text,
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  levelText: {
-    marginTop: 10,
-    color: Theme.exp,
-    fontSize: 34,
-    fontWeight: '900',
-  },
-  subtitle: {
-    marginTop: 10,
-    color: Theme.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  button: {
-    marginTop: 20,
-    minWidth: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 13,
-    backgroundColor: Theme.exp,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-})

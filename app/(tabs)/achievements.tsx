@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { ActivityIndicator, Alert } from 'react-native'
+import { ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { ACHIEVEMENT_CATEGORY_ORDER } from '@nexo/constants/achievements'
 import { Theme } from '@nexo/constants/theme'
@@ -18,6 +18,7 @@ import { AchievementsHero } from '@nexo/components/Achievements/AchievementsHero
 import { AlmostThereSection } from '@nexo/components/Achievements/AlmostThereSection'
 import { RefreshableScreen } from '@nexo/components/RefreshableScreen'
 import { useAuth } from '@nexo/contexts/AuthProvider'
+import { useFeedback } from '@nexo/contexts/FeedbackProvider'
 import { useAchievements } from '@nexo/hooks/useAchievements'
 import type { AchievementViewModel } from '@nexo/types/achievement.types'
 
@@ -31,8 +32,8 @@ const passesFilter: AchievementFilterPredicate = (item, filter) => {
 }
 
 export default function AchievementsScreen() {
-  const { userProfile, refreshUserProfile } = useAuth()
-  const userId = userProfile?.uid ?? userProfile?.id
+  const { userId, userProfile, refreshUserProfile } = useAuth()
+  const { showToast } = useFeedback()
   const {
     groupedAchievements,
     almostThere,
@@ -64,14 +65,19 @@ export default function AchievementsScreen() {
 
     try {
       const reward = await claimReward(item.id, item.claimableTier.id)
-      await refreshUserProfile()
-      Alert.alert(
-        'Нагороду отримано',
-        `+${reward.rewardCoins} Nexons${reward.rewardExp ? ` і +${reward.rewardExp} EXP` : ''}`,
-      )
+      await refreshUserProfile({
+        showLevelUp: reward.rewardExp > 0,
+      })
+      showToast({
+        type: 'success',
+        message: `Нагороду отримано: +${reward.rewardCoins} Nexons${reward.rewardExp ? ` і +${reward.rewardExp} EXP` : ''}`,
+      })
     } catch (claimError: any) {
-      await Promise.all([refetch(), refreshUserProfile()])
-      Alert.alert('Не вдалося забрати нагороду', claimError?.message ?? 'Спробуйте ще раз')
+      showToast({
+        type: 'error',
+        message: claimError?.message ?? 'Не вдалося забрати нагороду. Спробуйте ще раз.',
+      })
+      await Promise.allSettled([refetch(), refreshUserProfile()])
     }
   }
 

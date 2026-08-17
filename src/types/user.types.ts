@@ -21,7 +21,15 @@ export interface UserProfile {
   inventory?: string[]
   selectedThemeId?: string | null
   selectedAvatarId?: string | null
+  nestorIntroSeenAt?: string
+  nestorIntroVersion?: number
   createdAt?: string
   lastActiveDate?: string
   longestStreak?: number
+  stats?: {
+    mistakesFixed?: number
+    bestCorrectStreak?: number
+  }
+  mistakesFixed?: number
+  bestCorrectStreak?: number
 }

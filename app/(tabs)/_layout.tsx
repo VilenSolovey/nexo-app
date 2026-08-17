@@ -1,15 +1,32 @@
 import React from "react"
 import { Tabs, Redirect } from "expo-router"
+import { FullScreenState } from "@nexo/components/FullScreenState/FullScreenState"
 import { AnimatedTabIcon } from "@nexo/components/TabBar/AnimatedTabIcon"
 import { useAppTheme } from "@nexo/contexts/AppThemeProvider"
 import { useAuth } from "@nexo/contexts/AuthProvider"
 
 export default function TabsLayout() {
   const Theme = useAppTheme()
-  const { user, loading } = useAuth()
+  const { status, retryProfile } = useAuth()
 
-  if (!loading && !user) {
+  if (status === "unauthenticated") {
     return <Redirect href="/(public)/register" />
+  }
+
+  if (status === "restoring" || status === "loading-profile") {
+    return <FullScreenState variant="loading" />
+  }
+
+  if (status === "profile-error") {
+    return (
+      <FullScreenState
+        variant="error"
+        title="Не вдалося завантажити профіль"
+        description="Перевір з’єднання та спробуй ще раз."
+        actionLabel="Повторити"
+        onAction={() => { void retryProfile() }}
+      />
+    )
   }
 
   return (
@@ -44,7 +61,7 @@ export default function TabsLayout() {
         options={{
           title: "Home",
           tabBarIcon: (props) => (
-            <AnimatedTabIcon {...props} name="home-outline" />
+            <AnimatedTabIcon {...props} name="home-outline" activeName="home" />
           ),
         }}
       />
@@ -55,7 +72,16 @@ export default function TabsLayout() {
         options={{
           title: "Quizzes",
           tabBarIcon: (props) => (
-            <AnimatedTabIcon {...props} name="extension-puzzle-outline" />
+            <AnimatedTabIcon {...props} name="extension-puzzle-outline" activeName="extension-puzzle" />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chronicle"
+        options={{
+          title: "Хроніка",
+          tabBarIcon: (props) => (
+            <AnimatedTabIcon {...props} name="map-outline" activeName="map" />
           ),
         }}
       />
@@ -64,7 +90,7 @@ export default function TabsLayout() {
         options={{
           title: "Achievements",
           tabBarIcon: (props) => (
-            <AnimatedTabIcon {...props} name="medal-outline" />
+            <AnimatedTabIcon {...props} name="medal-outline" activeName="medal" />
           ),
         }}
       />
@@ -73,7 +99,7 @@ export default function TabsLayout() {
         options={{
           title: "Settings",
           tabBarIcon: (props) => (
-            <AnimatedTabIcon {...props} name="settings-outline" />
+            <AnimatedTabIcon {...props} name="settings-outline" activeName="settings" />
           ),
         }}
       />

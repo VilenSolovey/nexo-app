@@ -1,136 +1,183 @@
+import type { ComponentProps } from 'react'
+import type { Ionicons } from '@expo/vector-icons'
 import { THEME_COSMETICS } from '@nexo/constants/themes'
 
+export type ShopItemType = 'powerup' | 'cosmetic' | 'booster'
+export type ShopItemCategory = 'gear' | 'theme' | 'avatar' | 'legacy'
+export type ShopItemIcon = ComponentProps<typeof Ionicons>['name']
+
 export interface ShopItem {
-  id: string;
-  name: string;
-  description: string;
-  type: 'powerup' | 'cosmetic' | 'booster';
-  category: 'hints' | 'skip' | 'multiplier' | 'theme' | 'avatar';
-  price: number;
-  icon: string;
-  effect?: string;
-  uses?: number; 
+  id: string
+  name: string
+  description: string
+  type: ShopItemType
+  category: ShopItemCategory
+  price: number
+  icon: ShopItemIcon
+  effect?: string
+  uses?: number
+  maxOwned?: number
+  availableForPurchase?: boolean
+  featured?: boolean
 }
 
-const THEME_SHOP_ITEMS: ShopItem[] = THEME_COSMETICS.map((item) => ({
+const THEME_SHOP_ITEMS: ShopItem[] = THEME_COSMETICS.map((item, index) => ({
   id: item.id,
-  name: item.name,
+  name: item.name.replace(/^[^A-Za-zА-Яа-яІіЇїЄєҐґ0-9]+/, ''),
   description: item.description,
   type: 'cosmetic',
   category: 'theme',
   price: item.price ?? 0,
-  icon: item.icon,
+  icon: item.icon as ShopItemIcon,
   effect: item.effect,
+  availableForPurchase: true,
+  featured: index === THEME_COSMETICS.length - 1,
 }))
 
-export const SHOP_ITEMS: ShopItem[] = [
+const ACTIVE_GEAR: ShopItem[] = [
   {
     id: 'hint_reveal',
-    name: '💡 Підказка',
-    description: 'Показати підказку для поточного питання',
+    name: 'Польова нотатка',
+    description: 'Відкриває коротку нотатку без прямої відповіді.',
     type: 'powerup',
-    category: 'hints',
-    price: 30,
-    icon: 'bulb',
-    effect: 'Отримайте підказку, яка допоможе з відповіддю',
+    category: 'gear',
+    price: 18,
+    icon: 'document-text-outline',
+    effect: 'Підказка до одного питання',
     uses: 1,
+    maxOwned: 3,
+    availableForPurchase: true,
   },
   {
     id: 'fifty_fifty',
-    name: '✂️ 50/50',
-    description: 'Видалити 2 неправильні відповіді',
+    name: 'Відсів версій',
+    description: 'Прибирає два неправильні варіанти відповіді.',
     type: 'powerup',
-    category: 'hints',
-    price: 50,
-    icon: 'cut',
-    effect: 'Залишає тільки 2 варіанти відповіді',
+    category: 'gear',
+    price: 24,
+    icon: 'git-compare-outline',
+    effect: 'Працює у Spark із варіантами',
     uses: 1,
-  },
-  {
-    id: 'skip_question',
-    name: '⏭️ Пропуск',
-    description: 'Пропустити складне питання',
-    type: 'powerup',
-    category: 'skip',
-    price: 40,
-    icon: 'play-skip-forward',
-    effect: 'Пропустіть питання без втрати балів',
-    uses: 1,
+    maxOwned: 3,
+    availableForPurchase: true,
   },
   {
     id: 'time_freeze',
-    name: '⏸️ Заморозка часу',
-    description: 'Додатково +30 секунд на питання',
+    name: 'Запас часу',
+    description: 'Додає ще 30 секунд, щоб спокійно обдумати відповідь.',
     type: 'powerup',
-    category: 'skip',
-    price: 35,
-    icon: 'time',
-    effect: 'Отримайте більше часу для роздумів',
+    category: 'gear',
+    price: 14,
+    icon: 'hourglass-outline',
+    effect: '+30 секунд до таймера',
     uses: 1,
+    maxOwned: 3,
+    availableForPurchase: true,
+  },
+]
+
+const LEGACY_POWER_UPS: ShopItem[] = [
+  {
+    id: 'skip_question',
+    name: 'Пропуск',
+    description: 'Архівний предмет, який більше не продається.',
+    type: 'powerup',
+    category: 'legacy',
+    price: 0,
+    icon: 'play-skip-forward-outline',
+    uses: 1,
+    availableForPurchase: false,
   },
   {
     id: 'answer_reveal',
-    name: '🎯 Правильна відповідь',
-    description: 'Показати правильну відповідь',
+    name: 'Правильна відповідь',
+    description: 'Архівний предмет, який більше не продається.',
     type: 'powerup',
-    category: 'hints',
-    price: 100,
-    icon: 'checkmark-done-circle',
-    effect: 'Миттєво дізнайтесь правильну відповідь',
+    category: 'legacy',
+    price: 0,
+    icon: 'checkmark-done-circle-outline',
     uses: 1,
+    availableForPurchase: false,
   },
-  
   {
     id: 'double_coins',
-    name: '💰 Подвійні монети',
-    description: 'Отримуйте x2 Nexons за вікторину',
+    name: 'Подвійні Nexons',
+    description: 'Архівний бустер, який більше не продається.',
     type: 'booster',
-    category: 'multiplier',
-    price: 150,
-    icon: 'cash',
-    effect: 'Подвоює винагороду за вікторину',
-    uses: 3,
+    category: 'legacy',
+    price: 0,
+    icon: 'cash-outline',
+    uses: 1,
+    availableForPurchase: false,
   },
   {
     id: 'double_exp',
-    name: '⭐ Подвійний досвід',
-    description: 'Отримуйте x2 EXP за вікторину',
+    name: 'Подвійний досвід',
+    description: 'Архівний бустер, який більше не продається.',
     type: 'booster',
-    category: 'multiplier',
-    price: 150,
-    icon: 'star',
-    effect: 'Подвоює досвід за вікторину',
-    uses: 3,
+    category: 'legacy',
+    price: 0,
+    icon: 'star-outline',
+    uses: 1,
+    availableForPurchase: false,
   },
-  
-  ...THEME_SHOP_ITEMS,
+  {
+    id: 'lucky_charm',
+    name: 'Талісман',
+    description: 'Архівний бустер, який більше не продається.',
+    type: 'booster',
+    category: 'legacy',
+    price: 0,
+    icon: 'sparkles-outline',
+    uses: 1,
+    availableForPurchase: false,
+  },
+]
+
+const AVATAR_SHOP_ITEMS: ShopItem[] = [
   {
     id: 'avatar_scholar',
-    name: '🎓 Аватар Вчений',
-    description: 'Ексклюзивний аватар для профілю',
+    name: 'Дослідник',
+    description: 'Образ для тих, хто відновлює Архів уважно й послідовно.',
     type: 'cosmetic',
     category: 'avatar',
-    price: 300,
-    icon: 'school',
-    effect: 'Покажіть свою ерудованість',
+    price: 180,
+    icon: 'school-outline',
+    effect: 'Новий образ профілю',
+    availableForPurchase: true,
   },
   {
     id: 'avatar_champion',
-    name: '👑 Аватар Чемпіон',
-    description: 'Легендарний аватар переможця',
+    name: 'Хранитель',
+    description: 'Рідкісний образ досвідченого хранителя історії.',
     type: 'cosmetic',
     category: 'avatar',
-    price: 1000,
-    icon: 'trophy',
-    effect: 'Тільки для найкращих!',
+    price: 650,
+    icon: 'shield-checkmark-outline',
+    effect: 'Престижний образ профілю',
+    availableForPurchase: true,
   },
-];
+]
 
-export const SHOP_CATEGORIES = [
-  { id: 'all', name: 'Всі', icon: 'grid' },
-  { id: 'hints', name: 'Підказки', icon: 'bulb' },
-  { id: 'skip', name: 'Пропуски', icon: 'play-skip-forward' },
-  { id: 'multiplier', name: 'Бустери', icon: 'flash' },
-  { id: 'theme', name: 'Теми', icon: 'color-palette' },
-  { id: 'avatar', name: 'Аватари', icon: 'person' },
-];
+export const SHOP_ITEMS: ShopItem[] = [
+  ...ACTIVE_GEAR,
+  ...THEME_SHOP_ITEMS,
+  ...AVATAR_SHOP_ITEMS,
+  ...LEGACY_POWER_UPS,
+]
+
+export const PURCHASABLE_SHOP_ITEMS = SHOP_ITEMS.filter(
+  (item) => item.availableForPurchase === true,
+)
+
+export const SHOP_GEAR_ITEMS = PURCHASABLE_SHOP_ITEMS.filter(
+  (item) => item.category === 'gear',
+)
+
+export const SHOP_THEME_ITEMS = PURCHASABLE_SHOP_ITEMS.filter(
+  (item) => item.category === 'theme',
+)
+
+export const SHOP_AVATAR_ITEMS = PURCHASABLE_SHOP_ITEMS.filter(
+  (item) => item.category === 'avatar',
+)

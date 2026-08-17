@@ -12,6 +12,11 @@ export const StreakBanner = styled.View`
   border-width: 1px;
   border-color: rgba(235, 167, 110, 0.22);
   margin-top: 12px;
+  shadow-color: ${({ theme }) => theme.warning};
+  shadow-opacity: 0.13;
+  shadow-radius: 18px;
+  shadow-offset: 0px 10px;
+  elevation: 5;
 `
 
 export const StreakCopy = styled.View`
@@ -87,6 +92,11 @@ export const StreakRightPanel = styled.View`
   background-color: rgba(235, 167, 110, 0.12);
   border-width: 1px;
   border-color: rgba(235, 167, 110, 0.26);
+  shadow-color: ${({ theme }) => theme.warning};
+  shadow-opacity: 0.12;
+  shadow-radius: 14px;
+  shadow-offset: 0px 8px;
+  elevation: 3;
 `
 
 export const StreakValue = styled.Text`

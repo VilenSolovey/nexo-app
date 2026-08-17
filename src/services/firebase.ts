@@ -1,34 +1,39 @@
-import AsyncStorage from "@react-native-async-storage/async-storage"
-import Constants from "expo-constants"
-import { getApp, getApps, initializeApp } from "firebase/app"
-import { getAuth, getReactNativePersistence, initializeAuth } from "firebase/auth"
-import { getFirestore } from "firebase/firestore"
-import { getStorage } from "firebase/storage"
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+import { getApp, getApps, initializeApp } from "firebase/app";
+import {
+  getAuth,
+  getReactNativePersistence,
+  initializeAuth,
+} from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getFunctions } from "firebase/functions";
+import { getStorage } from "firebase/storage";
 
 type ExpoExtra = {
-  FIREBASE_API_KEY?: string
-  FIREBASE_AUTH_DOMAIN?: string
-  FIREBASE_PROJECT_ID?: string
-  FIREBASE_STORAGE_BUCKET?: string
-  FIREBASE_MESSAGING_SENDER_ID?: string
-  FIREBASE_APP_ID?: string
-  FIREBASE_MEASUREMENT_ID?: string
-}
+  FIREBASE_API_KEY?: string;
+  FIREBASE_AUTH_DOMAIN?: string;
+  FIREBASE_PROJECT_ID?: string;
+  FIREBASE_STORAGE_BUCKET?: string;
+  FIREBASE_MESSAGING_SENDER_ID?: string;
+  FIREBASE_APP_ID?: string;
+  FIREBASE_MEASUREMENT_ID?: string;
+};
 
-const extra = (Constants.expoConfig?.extra ?? {}) as ExpoExtra
+const extra = (Constants.expoConfig?.extra ?? {}) as ExpoExtra;
 
 function resolveConfigValue(
   publicEnvValue: string | undefined,
   extraValue: string | undefined,
   key: string,
 ) {
-  const value = publicEnvValue ?? extraValue
+  const value = publicEnvValue ?? extraValue;
 
   if (!value) {
-    throw new Error(`Missing Firebase config value: ${key}`)
+    throw new Error(`Missing Firebase config value: ${key}`);
   }
 
-  return value
+  return value;
 }
 
 const firebaseConfig = {
@@ -63,21 +68,34 @@ const firebaseConfig = {
     "appId",
   ),
   measurementId:
-    process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID ?? extra.FIREBASE_MEASUREMENT_ID,
-}
+    process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID ??
+    extra.FIREBASE_MEASUREMENT_ID,
+};
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+export const app =
+  getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
 function createAuth() {
   try {
     return initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
-    })
-  } catch {
-    return getAuth(app)
+    });
+  } catch (error: unknown) {
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? String((error as { code?: unknown }).code ?? "")
+        : "";
+
+    if (code === "auth/already-initialized") {
+      return getAuth(app);
+    }
+
+    console.error("Failed to initialize persistent Firebase Auth:", error);
+    throw error;
   }
 }
 
-export const db = getFirestore(app)
-export const auth = createAuth()
-export const storage = getStorage(app)
+export const db = getFirestore(app);
+export const auth = createAuth();
+export const storage = getStorage(app);
+export const functions = getFunctions(app, "europe-west1");

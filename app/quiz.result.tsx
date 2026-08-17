@@ -1,267 +1,342 @@
-import React, { useCallback, useEffect } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Theme } from '@nexo/constants/theme';
-import { useAuth } from '@nexo/contexts/AuthProvider';
-import { getQuizById } from '@nexo/services/quiz.service';
-import { getQuizProgress, saveQuizAttempt } from '@nexo/services/progress.service';
-import { completeQuizSession } from '@nexo/services/quiz-session.service';
-import { applyUserRewards, registerDailyActivity } from '@nexo/services/user.service';
-import { getQuizRewardMultiplier, isQuizCompleted, MAX_QUIZ_ATTEMPTS } from '@nexo/utils/quiz-progress';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { NestorDialog } from '@nexo/components/Chronicle/NestorDialog'
+import { FullScreenState } from '@nexo/components/FullScreenState/FullScreenState'
+import { Entrance } from '@nexo/components/Motion/Entrance'
+import { ResultActions } from '@nexo/components/Quiz/Result/ResultActions'
+import { ResultBanner } from '@nexo/components/Quiz/Result/ResultBanner'
+import { ResultHero } from '@nexo/components/Quiz/Result/ResultHero'
 import {
   Container,
   SafeArea,
   ScrollContent,
-} from '@nexo/components/Quiz/Result/QuizResult.styled';
-import { ResultBanner } from '@nexo/components/Quiz/Result/ResultBanner';
-import { ResultHero } from '@nexo/components/Quiz/Result/ResultHero';
-import { ScoreSummaryCard } from '@nexo/components/Quiz/Result/ScoreSummaryCard';
-import { RewardsSummaryCard } from '@nexo/components/Quiz/Result/RewardsSummaryCard';
-import { ResultActions } from '@nexo/components/Quiz/Result/ResultActions';
+} from '@nexo/components/Quiz/Result/QuizResult.styled'
+import { RewardsSummaryCard } from '@nexo/components/Quiz/Result/RewardsSummaryCard'
+import { ScoreSummaryCard } from '@nexo/components/Quiz/Result/ScoreSummaryCard'
+import { Theme } from '@nexo/constants/theme'
+import { useAuth } from '@nexo/contexts/AuthProvider'
+import {
+  finalizeQuizAttempt,
+  type FinalizedQuizAttempt,
+} from '@nexo/services/quiz-attempt.service'
+import { registerDailyActivity } from '@nexo/services/user.service'
+import { getNestorDialogue } from '@nexo/utils/nestor-dialogue'
+import { formatChronicleDiscoveryReadyAt } from '@nexo/utils/chronicle-route'
+import { PERFECT_QUIZ_SCORE } from '@nexo/utils/quiz-progress'
+
+type SubmissionStatus = 'saving' | 'saved' | 'error'
+
+function firstString(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0]?.trim() || null
+  return value?.trim() || null
+}
+
+function parseAnswersParam(value: string | string[] | undefined): Record<string, unknown> | null {
+  const raw = firstString(value)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null
+  } catch {
+    return null
+  }
+}
+
+function parseNonNegativeNumber(value: string | string[] | undefined): number {
+  const parsed = Number(firstString(value) ?? 0)
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0
+}
+
+function getResultCopy(percentage: number) {
+  if (percentage === 100) {
+    return {
+      emoji: '🏆',
+      title: 'Ідеально!',
+      message: 'Ви відповіли на всі питання правильно! Ви справжній експерт!',
+    }
+  }
+  if (percentage >= 80) {
+    return {
+      emoji: '🌟',
+      title: 'Чудово!',
+      message: 'Відмінний результат! Продовжуйте в тому ж дусі!',
+    }
+  }
+  if (percentage >= 60) {
+    return {
+      emoji: '👍',
+      title: 'Добре!',
+      message: 'Хороша робота! Можна і краще, але це вже успіх!',
+    }
+  }
+  return {
+    emoji: '💪',
+    title: 'Спробуй ще раз!',
+    message: 'Не засмучуйтесь! Практика робить майстра. Спробуйте ще раз!',
+  }
+}
 
 export default function QuizResultScreen() {
-  const {
-    quizId,
-    correct,
-    total,
-    passed,
-    timeExpired,
-    quitEarly,
-    timeSpent,
-    sessionId,
-    leftAppDuringQuiz,
-    backgroundCount,
-    backgroundDurationMs,
-    coinsBoostMultiplier,
-    expBoostMultiplier,
-  } = useLocalSearchParams();
-  const router = useRouter();
-  const { userProfile, refreshUserProfile } = useAuth();
-  const userId = userProfile?.uid ?? userProfile?.id;
+  const params = useLocalSearchParams<{
+    quizId?: string | string[]
+    sessionId?: string | string[]
+    answers?: string | string[]
+    timeExpired?: string | string[]
+    quitEarly?: string | string[]
+    timeSpent?: string | string[]
+    backgroundCount?: string | string[]
+    backgroundDurationMs?: string | string[]
+  }>()
+  const router = useRouter()
+  const { userId, refreshUserProfile } = useAuth()
+  const quizId = firstString(params.quizId)
+  const sessionId = firstString(params.sessionId)
+  const isTimeExpired = firstString(params.timeExpired) === 'true'
+  const isQuitEarly = firstString(params.quitEarly) === 'true'
+  const answersParam = firstString(params.answers)
+  const answers = useMemo(
+    () => parseAnswersParam(answersParam ?? undefined),
+    [answersParam],
+  )
+  const timeSpent = parseNonNegativeNumber(params.timeSpent)
+  const backgroundCount = parseNonNegativeNumber(params.backgroundCount)
+  const backgroundDurationMs = parseNonNegativeNumber(params.backgroundDurationMs)
+  const hasSubmissionInput = Boolean(userId && quizId && sessionId && answers)
+  const [status, setStatus] = useState<SubmissionStatus>(
+    hasSubmissionInput ? 'saving' : 'error',
+  )
+  const [error, setError] = useState<string | null>(
+    hasSubmissionInput
+      ? null
+      : 'Не вистачає даних завершеної сесії. Поверніться до списку вікторин.',
+  )
+  const [result, setResult] = useState<FinalizedQuizAttempt | null>(null)
+  const [nestorVisible, setNestorVisible] = useState(false)
+  const submissionInFlightRef = useRef(false)
 
-  const [quiz, setQuiz] = React.useState<any | null>(null);
-  const [mastered, setMastered] = React.useState(false);
-  const [attempt, setAttempt] = React.useState<number | null>(null);
- 
-  const savedRef = React.useRef(false);
+  const submitResult = useCallback(async () => {
+    if (submissionInFlightRef.current) return
+    if (!userId || !quizId || !sessionId || !answers) {
+      setError('Не вистачає даних завершеної сесії. Поверніться до списку вікторин.')
+      setStatus('error')
+      return
+    }
 
-  const isTimeExpired = timeExpired === 'true';
-  const isQuitEarly = quitEarly === 'true';
-  const didLeaveAppDuringQuiz = leftAppDuringQuiz === 'true';
-  const correctCount = parseInt(correct as string) || 0;
-  const totalCount = parseInt(total as string) || 1;
-  const isPassed = passed === 'true';
-  const resolvedTimeSpent = parseInt(timeSpent as string) || 0;
-  const resolvedBackgroundCount = parseInt(backgroundCount as string) || 0;
-  const resolvedBackgroundDurationMs = parseInt(backgroundDurationMs as string) || 0;
-  const resolvedCoinsBoost = Math.max(parseInt(coinsBoostMultiplier as string) || 1, 1);
-  const resolvedExpBoost = Math.max(parseInt(expBoostMultiplier as string) || 1, 1);
-  const percentage = Math.round((correctCount / totalCount) * 100);
-  const resolvedAttempt = attempt ?? 1;
-
-  const rewardMultiplier = getQuizRewardMultiplier(resolvedAttempt);
-  const isReducedReward = resolvedAttempt > 1;
-  const canRetake = !isQuizCompleted(resolvedAttempt);
-  const baseCoins = Number(quiz?.coinReward ?? quiz?.reward ?? 0);
-  const baseExp = Number(quiz?.expReward ?? quiz?.exp ?? 0);
-  const boostedCoinsBase = baseCoins * resolvedCoinsBoost;
-  const boostedExpBase = baseExp * resolvedExpBoost;
-  const earnedCoins = Math.floor(boostedCoinsBase * rewardMultiplier);
-  const earnedExp = Math.floor(boostedExpBase * rewardMultiplier);
-
-  useEffect(() => {
-    if (!quizId) return;
-    getQuizById(String(quizId)).then(setQuiz).catch(console.error);
-  }, [quizId]);
-
-  useEffect(() => {
-    if (!userId || !quiz?.id) return;
-
-    getQuizProgress(userId, quiz.id)
-      .then((progress) => {
-        setAttempt((progress?.attempts ?? 0) + 1);
-      })
-      .catch(() => {
-        setAttempt(1);
-      });
-  }, [quiz?.id, userId]);
-
-  const updateUserRewards = useCallback(async () => {
-    if (!userId || !quiz) return;
+    submissionInFlightRef.current = true
+    setStatus('saving')
+    setError(null)
 
     try {
-      const effectiveAttempt = attempt ?? 1;
-      const effectiveRewardMultiplier = getQuizRewardMultiplier(effectiveAttempt);
-      const baseCoins = Number(quiz.coinReward ?? quiz.reward ?? 0);
-      const baseExp = Number(quiz.expReward ?? quiz.exp ?? 0);
-      const finalCoins = Math.floor(baseCoins * resolvedCoinsBoost * effectiveRewardMultiplier);
-      const finalExp = Math.floor(baseExp * resolvedExpBoost * effectiveRewardMultiplier);
-
-      if (typeof sessionId === 'string' && sessionId.trim()) {
-        await completeQuizSession({
-          sessionId,
-          score: correctCount,
-          total: totalCount,
-          timeSpent: resolvedTimeSpent,
-          passed: isPassed,
-          timeExpired: isTimeExpired,
-          quitEarly: isQuitEarly,
-          backgroundCount: resolvedBackgroundCount,
-          backgroundDurationMs: resolvedBackgroundDurationMs,
-        });
-      }
-
-      const progressResult = await saveQuizAttempt({
-        userId,
-        quizId: quiz.id,
-        score: correctCount,
-        total: totalCount,
-        earnedCoins: isPassed ? finalCoins : 0,
-        earnedExp: isPassed ? finalExp : 0,
-        timeSpent: resolvedTimeSpent,
-        passed: isPassed,
+      const finalized = await finalizeQuizAttempt({
+        quizId,
+        sessionId,
+        answers,
         timeExpired: isTimeExpired,
-        sessionId: typeof sessionId === 'string' ? sessionId : undefined,
-        leftAppDuringQuiz: didLeaveAppDuringQuiz,
-        backgroundCount: resolvedBackgroundCount,
-        backgroundDurationMs: resolvedBackgroundDurationMs,
-      });
+        quitEarly: isQuitEarly,
+        timeSpent,
+        backgroundCount,
+        backgroundDurationMs,
+      })
 
-      setMastered(progressResult.mastered);
+      setResult(finalized)
+      setStatus('saved')
 
-      if (isPassed) {
-        await applyUserRewards(userId, {
-          coinsDelta: finalCoins,
-          expDelta: finalExp,
-        })
+      try {
+        await registerDailyActivity(userId)
+        await refreshUserProfile({ showLevelUp: finalized.passed })
+      } catch (profileError) {
+        console.error('Result saved, but profile refresh failed:', profileError)
       }
 
-      await registerDailyActivity(userId)
-
-      await refreshUserProfile();
-    } catch (error) {
-      console.error('Error updating rewards:', error);
+      if (finalized.source === 'chronicle') {
+        setNestorVisible(true)
+      }
+    } catch (submissionError: any) {
+      console.error('Failed to finalize quiz attempt:', submissionError)
+      setError(submissionError?.message ?? 'Не вдалося зберегти результат.')
+      setStatus('error')
+    } finally {
+      submissionInFlightRef.current = false
     }
   }, [
-    attempt,
-    correctCount,
-    isPassed,
+    answers,
+    backgroundCount,
+    backgroundDurationMs,
     isQuitEarly,
     isTimeExpired,
-    quiz,
-    resolvedTimeSpent,
-    resolvedBackgroundCount,
-    resolvedBackgroundDurationMs,
-    resolvedCoinsBoost,
-    resolvedExpBoost,
-    didLeaveAppDuringQuiz,
-    sessionId,
-    totalCount,
+    quizId,
     refreshUserProfile,
+    sessionId,
+    timeSpent,
     userId,
-  ]);
+  ])
 
   useEffect(() => {
-    if (userId && quiz && attempt !== null && !savedRef.current) {
-      savedRef.current = true;
-      updateUserRewards();
-    }
-  }, [attempt, quiz, updateUserRewards, userId]);
+    void submitResult()
+  }, [submitResult])
 
-  const getResultEmoji = () => {
-    if (percentage === 100) return '🏆';
-    if (percentage >= 80) return '🌟';
-    if (percentage >= 60) return '👍';
-    return '💪';
-  };
+  if (status === 'saving') {
+    return (
+      <FullScreenState
+        variant="loading"
+        title="Зберігаємо результат"
+        description="Перевіряємо відповіді та оновлюємо прогрес."
+      />
+    )
+  }
 
-  const getResultTitle = () => {
-    if (percentage === 100) return 'Ідеально!';
-    if (percentage >= 80) return 'Чудово!';
-    if (percentage >= 60) return 'Добре!';
-    return 'Спробуй ще раз!';
-  };
+  if (status === 'error' || !result) {
+    return (
+      <FullScreenState
+        variant="error"
+        title="Не вдалося зберегти результат"
+        description={error ?? 'Перевірте з’єднання та спробуйте ще раз.'}
+        actionLabel={hasSubmissionInput ? 'Спробувати ще раз' : 'До вікторин'}
+        onAction={hasSubmissionInput
+          ? () => { void submitResult() }
+          : () => router.replace('/quiz')}
+      />
+    )
+  }
 
-  const getResultMessage = () => {
-    if (percentage === 100) return 'Ви відповіли на всі питання правильно! Ви справжній експерт!';
-    if (percentage >= 80) return 'Відмінний результат! Продовжуйте в тому ж дусі!';
-    if (percentage >= 60) return 'Хороша робота! Можна і краще, але це вже успіх!';
-    return 'Не засмучуйтесь! Практика робить майстра. Спробуйте ще раз!';
-  };
+  const copy = getResultCopy(result.percentage)
+  const hasPerfectScore = result.percentage >= PERFECT_QUIZ_SCORE
+  const isReducedReward = result.attempt > 1
+  const boostedCoinsBase = result.baseCoins * result.coinsBoostMultiplier
+  const boostedExpBase = result.baseExp * result.expBoostMultiplier
+  const chronicleOutcome = result.chronicleOutcome
+  const chronicleNextAction = chronicleOutcome?.nextAction as string | undefined
+  const isSparkRetryReady = chronicleNextAction === 'spark_retry'
+  const nestorEvent = chronicleNextAction === 'spark_retry'
+    ? 'challenge_retry_ready'
+    : !result.passed
+    ? 'challenge_failed'
+    : chronicleNextAction === 'discovery_search'
+      ? 'discovery_search_started'
+      : chronicleNextAction === 'reconstruction'
+        ? 'reconstruction_ready'
+        : chronicleNextAction === 'trial'
+          ? 'trial_ready'
+        : chronicleNextAction === 'chapter_completed'
+            ? 'chapter_completed'
+            : 'challenge_passed'
+  const nestorDialogue = getNestorDialogue(nestorEvent, {
+    readyAtLabel: formatChronicleDiscoveryReadyAt(
+      chronicleOutcome?.discovery?.readyAt,
+    ) ?? undefined,
+  })
 
   return (
     <Container colors={[Theme.background, Theme.card]}>
       <SafeArea>
         <ScrollContent>
+          {isTimeExpired ? (
+            <Entrance index={0}>
+              <ResultBanner
+                variant="time"
+                icon="time-outline"
+                text="Час вийшов! Ось скільки ви встигли"
+              />
+            </Entrance>
+          ) : null}
 
-          {isTimeExpired && (
-            <ResultBanner
-              variant="time"
-              icon="time-outline"
-              text="Час вийшов! Ось скільки ви встигли"
+          {isQuitEarly ? (
+            <Entrance index={0}>
+              <ResultBanner
+                variant="attempt"
+                icon="exit-outline"
+                text="Ви завершили квіз достроково. Спроба зарахована, але нагорода не нараховується."
+              />
+            </Entrance>
+          ) : null}
+
+          {isReducedReward ? (
+            <Entrance index={1}>
+              <ResultBanner
+                variant="attempt"
+                icon="information-circle-outline"
+                text={`Спроба ${result.attempt} — нагорода зменшена до ${Math.round(result.rewardMultiplier * 100)}%`}
+              />
+            </Entrance>
+          ) : null}
+
+          {result.attempt === 1 ? (
+            <Entrance index={1}>
+              <ResultBanner
+                variant="attempt"
+                icon="ribbon-outline"
+                iconColor={Theme.primary}
+                text="Нагорода нараховується лише за успішне проходження"
+              />
+            </Entrance>
+          ) : null}
+
+          {result.mastered ? (
+            <Entrance index={2}>
+              <ResultBanner
+                variant="mastered"
+                icon={isSparkRetryReady ? 'refresh-circle-outline' : 'trophy'}
+                text={isSparkRetryReady
+                  ? 'Спроби вичерпано. Spark можна створити повторно з Хроніки.'
+                  : hasPerfectScore
+                  ? 'Квіз завершено! Набрано 100%.'
+                  : `Квіз завершено! Використано ${result.maxAttempts} спроби.`}
+              />
+            </Entrance>
+          ) : null}
+
+          <Entrance index={3}>
+            <ResultHero
+              emoji={copy.emoji}
+              title={copy.title}
+              message={copy.message}
             />
-          )}
-          {isQuitEarly && (
-            <ResultBanner
-              variant="attempt"
-              icon="exit-outline"
-              text="Ви завершили квіз достроково. Спроба зарахована, але нагорода не нараховується."
+          </Entrance>
+
+          <Entrance index={4}>
+            <ScoreSummaryCard
+              percentage={result.percentage}
+              correctCount={result.correctCount}
+              totalCount={result.totalCount}
             />
-          )}
-          {isReducedReward && (
-            <ResultBanner
-              variant="attempt"
-              icon="information-circle-outline"
-              text={`Спроба ${resolvedAttempt} — нагорода зменшена до ${Math.round(rewardMultiplier * 100)}%`}
+          </Entrance>
+
+          {result.passed ? (
+            <Entrance index={5}>
+              <RewardsSummaryCard
+                coins={result.earnedCoins}
+                exp={result.earnedExp}
+                originalCoins={boostedCoinsBase}
+                originalExp={boostedExpBase}
+                isReducedReward={isReducedReward}
+              />
+            </Entrance>
+          ) : null}
+
+          <Entrance index={6}>
+            <ResultActions
+              canRetake={result.canRetake}
+              retryLabel={result.attempt === 1 ? 'Навчальна перездача' : 'Спробувати ще раз'}
+              onRetry={() => router.replace(`/quiz-play/${result.quizId}` as never)}
+              onHome={() => router.replace('/(tabs)')}
             />
-          )}
-
-          {resolvedAttempt === 1 && (
-            <ResultBanner
-              variant="attempt"
-              icon="ribbon-outline"
-              iconColor={Theme.primary}
-              text="Нагорода нараховується лише за 100% правильних відповідей"
-            />
-          )}
-
-          {mastered && (
-            <ResultBanner
-              variant="mastered"
-              icon="trophy"
-              text={`🎓 Квіз завершено! Використано ${MAX_QUIZ_ATTEMPTS} спроби.`}
-            />
-          )}
-
-          <ResultHero
-            emoji={getResultEmoji()}
-            title={getResultTitle()}
-            message={getResultMessage()}
-          />
-
-          <ScoreSummaryCard
-            percentage={percentage}
-            correctCount={correctCount}
-            totalCount={totalCount}
-          />
-
-          {isPassed && quiz && (
-            <RewardsSummaryCard
-              coins={earnedCoins}
-              exp={earnedExp}
-              originalCoins={boostedCoinsBase}
-              originalExp={boostedExpBase}
-              isReducedReward={isReducedReward}
-            />
-          )}
-
-          <ResultActions
-            canRetake={Boolean(quiz && canRetake)}
-            retryLabel={resolvedAttempt === 1 ? 'Навчальна перездача' : 'Спробувати ще раз'}
-            onRetry={() => router.replace(`/quiz-play/${quiz.id}` as any)}
-            onHome={() => router.replace('/(tabs)')}
-          />
+          </Entrance>
         </ScrollContent>
+
+        <NestorDialog
+          visible={nestorVisible}
+          title={nestorDialogue.title}
+          message={nestorDialogue.message}
+          primaryLabel="Зрозуміло"
+          mode={nestorDialogue.mode}
+          mood={nestorDialogue.mood}
+          onPrimary={() => undefined}
+          onDismiss={() => setNestorVisible(false)}
+        />
       </SafeArea>
     </Container>
-  );
+  )
 }

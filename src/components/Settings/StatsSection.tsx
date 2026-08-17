@@ -42,7 +42,7 @@ export function StatsSection({
     >
       <StatsGrid>
         <StatsItem label="Квізів зіграно" value={quizzesCount} icon="game-controller-outline" />
-        <StatsItem label="Рекорд streak" value={String(longestStreak)} icon="flame-outline" />
+        <StatsItem label="Рекорд серії" value={String(longestStreak)} icon="flame-outline" />
         <StatsItem
           label="Етапів ачівок"
           value={achievementsCount}

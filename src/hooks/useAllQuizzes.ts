@@ -1,43 +1,65 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { getAllQuizzes } from "@nexo/services/quiz.service"
 import { normalizeQuizzes } from "@nexo/utils/quiz.mapper"
 import type { Quiz } from "@nexo/types/quiz.types"
 
-export function useAllQuizzes() {
-  const [quizzes, setQuizzes] = useState<Quiz[]>([])
-  const [loading, setLoading] = useState(true)
+const PUBLIC_QUIZZES_CACHE_KEY = "__public__"
+const quizzesCache = new Map<string, Quiz[]>()
+
+export function useAllQuizzes(userId?: string | null) {
+  const cacheKey = userId ?? PUBLIC_QUIZZES_CACHE_KEY
+  const cachedQuizzes = useMemo(() => quizzesCache.get(cacheKey), [cacheKey])
+  const [quizzes, setQuizzes] = useState<Quiz[]>(cachedQuizzes ?? [])
+  const [loading, setLoading] = useState(!cachedQuizzes)
+  const [ready, setReady] = useState(Boolean(cachedQuizzes))
   const [error, setError] = useState<string | null>(null)
-  const refetch = useCallback(() => {
-    setLoading(true)
+  const hasLoadedRef = useRef(Boolean(cachedQuizzes))
+  const requestIdRef = useRef(0)
+
+  const refetch = useCallback(async () => {
+    const requestId = requestIdRef.current + 1
+    requestIdRef.current = requestId
+    if (!hasLoadedRef.current) setLoading(true)
     setError(null)
 
-    getAllQuizzes()
-      .then(rows => setQuizzes(normalizeQuizzes(rows)))
-      .catch(e => setError(e?.message ?? "Failed to load quizzes"))
-      .finally(() => setLoading(false))
-  }, [])
+    try {
+      const rows = await getAllQuizzes(userId)
+      if (requestId !== requestIdRef.current) return
+      const normalized = normalizeQuizzes(rows)
+      quizzesCache.set(cacheKey, normalized)
+      setQuizzes(normalized)
+      setReady(true)
+    } catch (e: any) {
+      if (requestId !== requestIdRef.current) return
+      setError(e?.message ?? "Failed to load quizzes")
+    } finally {
+      if (requestId === requestIdRef.current) {
+        hasLoadedRef.current = true
+        setLoading(false)
+      }
+    }
+  }, [cacheKey, userId])
 
   useEffect(() => {
-    let mounted = true;
-  
-    (async () => {
-      try {
-        const rows = await getAllQuizzes()
-        if (!mounted) return
-        
-        setQuizzes(normalizeQuizzes(rows))
-      } catch (e: any) {
-        if (!mounted) return
-        setError(e?.message ?? "Failed to load quizzes")
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    })()
+    const cached = quizzesCache.get(cacheKey)
+    hasLoadedRef.current = Boolean(cached)
+
+    if (cached) {
+      setQuizzes(cached)
+      setReady(true)
+      setLoading(false)
+    } else {
+      setQuizzes([])
+      setReady(false)
+      setLoading(true)
+    }
+
+    void refetch()
 
     return () => {
-      mounted = false
+      requestIdRef.current += 1
     }
-  }, [])
+  }, [cacheKey, refetch])
 
-  return { quizzes, loading, error, refetch }
+  return { quizzes, loading, ready, error, refetch }
 }
